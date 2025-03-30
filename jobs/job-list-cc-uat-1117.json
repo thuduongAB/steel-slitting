@@ -1,0 +1,600 @@
+{
+  "slit_request_id": 1117,
+  "number of job": 37,
+  "jobs": [
+    {
+      "job": 0,
+      "materialprop": "POSCOVN+SPCC-SD+0.6",
+      "code": "POSCOVN SPCC-SD 0.6",
+      "available_stock_qty": {
+        "NQS": 15682.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 22.0,
+          "len_fg_codes": 1
+        }
+      },
+      "total_need_cut": 22.0
+    },
+    {
+      "job": 1,
+      "materialprop": "CSC+SPCE-SD+1.2",
+      "code": "CSC SPCE-SD 1.2",
+      "available_stock_qty": {
+        "HSC": 1952.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 47.0,
+          "len_fg_codes": 1
+        }
+      },
+      "total_need_cut": 47.0
+    },
+    {
+      "job": 2,
+      "materialprop": "POSCOVST+SUS409L-2B+2.5",
+      "code": "POSCOVST SUS409L-2B 2.5",
+      "available_stock_qty": {
+        "NQS": 16507.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 354.0,
+          "len_fg_codes": 1
+        }
+      },
+      "total_need_cut": 354.0
+    },
+    {
+      "job": 3,
+      "materialprop": "NSC+JSC270C-SD+2.9",
+      "code": "NSC JSC270C-SD 2.9",
+      "available_stock_qty": {
+        "NQS": 8430.0
+      },
+      "tasks": {
+        "big": {
+          "total_need_cut": 392.0,
+          "len_fg_codes": 1
+        }
+      },
+      "total_need_cut": 392.0
+    },
+    {
+      "job": 4,
+      "materialprop": "CSC+JSC440W-SD+1.4",
+      "code": "CSC JSC440W-SD 1.4",
+      "available_stock_qty": {
+        "HSC": 3667.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 400.0,
+          "len_fg_codes": 1
+        }
+      },
+      "total_need_cut": 400.0
+    },
+    {
+      "job": 5,
+      "materialprop": "CSVC+JSC440W-SD+1.4",
+      "code": "CSVC JSC440W-SD 1.4",
+      "available_stock_qty": {
+        "HSC": 14530.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 500.0,
+          "len_fg_codes": 1
+        }
+      },
+      "total_need_cut": 500.0
+    },
+    {
+      "job": 6,
+      "materialprop": "POSCOVN+JSC270C-SD+2.0",
+      "code": "POSCOVN JSC270C-SD 2.0",
+      "available_stock_qty": {
+        "HSC": 16079.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 800.0,
+          "len_fg_codes": 2
+        }
+      },
+      "total_need_cut": 800.0
+    },
+    {
+      "job": 7,
+      "materialprop": "POSCO+JSC270E-SD+2.9",
+      "code": "POSCO JSC270E-SD 2.9",
+      "available_stock_qty": {
+        "NQS": 28200.0,
+        "HSC": 37130.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 808.0,
+          "len_fg_codes": 1
+        }
+      },
+      "total_need_cut": 808.0
+    },
+    {
+      "job": 8,
+      "materialprop": "CSC+CH1751Z-F 20/20+0.8",
+      "code": "CSC CH1751Z-F 20/20 0.8",
+      "available_stock_qty": {
+        "HSC": 8105.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 1265.0,
+          "len_fg_codes": 2
+        }
+      },
+      "total_need_cut": 1265.0
+    },
+    {
+      "job": 9,
+      "materialprop": "POSCOVN+SPCC-SD+0.8",
+      "code": "POSCOVN SPCC-SD 0.8",
+      "available_stock_qty": {
+        "HSC": 16050.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 1458.0,
+          "len_fg_codes": 3
+        }
+      },
+      "total_need_cut": 1458.0
+    },
+    {
+      "job": 10,
+      "materialprop": "CSC+JSC270E-SD+2.3",
+      "code": "CSC JSC270E-SD 2.3",
+      "available_stock_qty": {
+        "HSC": 4592.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 1751.0,
+          "len_fg_codes": 2
+        }
+      },
+      "total_need_cut": 1751.0
+    },
+    {
+      "job": 11,
+      "materialprop": "NSC+JNC270F 20/20+1.0",
+      "code": "NSC JNC270F 20/20 1.0",
+      "available_stock_qty": {
+        "HSC": 30350.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 2400.0,
+          "len_fg_codes": 2
+        }
+      },
+      "total_need_cut": 2400.0
+    },
+    {
+      "job": 12,
+      "materialprop": "POSCOVN+JSC270C-SD+1.2",
+      "code": "POSCOVN JSC270C-SD 1.2",
+      "available_stock_qty": {
+        "HSC": 32612.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 2931.0,
+          "len_fg_codes": 4
+        }
+      },
+      "total_need_cut": 2931.0
+    },
+    {
+      "job": 13,
+      "materialprop": "NSC+JSC270C-SD+3.2",
+      "code": "NSC JSC270C-SD 3.2",
+      "available_stock_qty": {
+        "HSC": 5534.0,
+        "NQS": 27700.0
+      },
+      "tasks": {
+        "big": {
+          "total_need_cut": 3024.0,
+          "len_fg_codes": 3
+        }
+      },
+      "total_need_cut": 3024.0
+    },
+    {
+      "job": 14,
+      "materialprop": "POSCO+JSC270C-SD+0.6",
+      "code": "POSCO JSC270C-SD 0.6",
+      "available_stock_qty": {
+        "NQS": 18350.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 3028.0,
+          "len_fg_codes": 1
+        }
+      },
+      "total_need_cut": 3028.0
+    },
+    {
+      "job": 15,
+      "materialprop": "CSC+JSC590R-SD+1.2",
+      "code": "CSC JSC590R-SD 1.2",
+      "available_stock_qty": {
+        "HSC": 14885.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 3153.0,
+          "len_fg_codes": 1
+        }
+      },
+      "total_need_cut": 3153.0
+    },
+    {
+      "job": 16,
+      "materialprop": "NSC+JSC270C-SD+2.6",
+      "code": "NSC JSC270C-SD 2.6",
+      "available_stock_qty": {
+        "HSC": 6870.0,
+        "NQS": 32152.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 3312.0,
+          "len_fg_codes": 2
+        }
+      },
+      "total_need_cut": 3312.0
+    },
+    {
+      "job": 17,
+      "materialprop": "CSC+SPCC-SD+3.2",
+      "code": "CSC SPCC-SD 3.2",
+      "available_stock_qty": {
+        "NQS": 46884.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 4479.0,
+          "len_fg_codes": 2
+        }
+      },
+      "total_need_cut": 4479.0
+    },
+    {
+      "job": 18,
+      "materialprop": "POSCOVN+JSC270C-SD+1.4",
+      "code": "POSCOVN JSC270C-SD 1.4",
+      "available_stock_qty": {
+        "HSC": 19209.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 5908.3,
+          "len_fg_codes": 8
+        }
+      },
+      "total_need_cut": 5908.3
+    },
+    {
+      "job": 19,
+      "materialprop": "CSC+JSC440W-SD+0.8",
+      "code": "CSC JSC440W-SD 0.8",
+      "available_stock_qty": {
+        "NQS": 18925.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 7118.0,
+          "len_fg_codes": 2
+        }
+      },
+      "total_need_cut": 7118.0
+    },
+    {
+      "job": 20,
+      "materialprop": "CSC+CH1751Z-F 0/20+0.8",
+      "code": "CSC CH1751Z-F 0/20 0.8",
+      "available_stock_qty": {
+        "HSC": 16067.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 8000.0,
+          "len_fg_codes": 2
+        }
+      },
+      "total_need_cut": 8000.0
+    },
+    {
+      "job": 21,
+      "materialprop": "NSC+JSC270E-SD+2.6",
+      "code": "NSC JSC270E-SD 2.6",
+      "available_stock_qty": {
+        "HSC": 51830.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 9998.0,
+          "len_fg_codes": 1
+        }
+      },
+      "total_need_cut": 9998.0
+    },
+    {
+      "job": 22,
+      "materialprop": "POSCOVN+SPCC-SD+1.0",
+      "code": "POSCOVN SPCC-SD 1.0",
+      "available_stock_qty": {
+        "HSC": 61166.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 900.0,
+          "len_fg_codes": 2
+        },
+        "medium": {
+          "total_need_cut": 9299.0,
+          "len_fg_codes": 13
+        }
+      },
+      "total_need_cut": 10199.0
+    },
+    {
+      "job": 23,
+      "materialprop": "CSC+SPCC-SD+2.3",
+      "code": "CSC SPCC-SD 2.3",
+      "available_stock_qty": {
+        "NQS": 6360.0,
+        "HSC": 8195.0
+      },
+      "tasks": {
+        "big": {
+          "total_need_cut": 1064.0,
+          "len_fg_codes": 3
+        },
+        "small": {
+          "total_need_cut": 10951.0,
+          "len_fg_codes": 3
+        }
+      },
+      "total_need_cut": 12015.0
+    },
+    {
+      "job": 24,
+      "materialprop": "POSCOVN+SPCC-SD+1.6",
+      "code": "POSCOVN SPCC-SD 1.6",
+      "available_stock_qty": {
+        "NQS": 1781.0,
+        "HSC": 51048.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 2757.0,
+          "len_fg_codes": 8
+        },
+        "medium": {
+          "total_need_cut": 9414.0,
+          "len_fg_codes": 9
+        }
+      },
+      "total_need_cut": 12171.0
+    },
+    {
+      "job": 25,
+      "materialprop": "POSCOVST+SUS409L-2D+1.5",
+      "code": "POSCOVST SUS409L-2D 1.5",
+      "available_stock_qty": {
+        "NQS": 22587.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 12372.0,
+          "len_fg_codes": 10
+        }
+      },
+      "total_need_cut": 12372.0
+    },
+    {
+      "job": 26,
+      "materialprop": "CSC+SPHC+8.0",
+      "code": "CSC SPHC 8.0",
+      "available_stock_qty": {
+        "NQS": 35870.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 12377.0,
+          "len_fg_codes": 2
+        }
+      },
+      "total_need_cut": 12377.0
+    },
+    {
+      "job": 27,
+      "materialprop": "CSC+JSC590R-SD+1.4",
+      "code": "CSC JSC590R-SD 1.4",
+      "available_stock_qty": {
+        "NQS": 28575.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 12400.0,
+          "len_fg_codes": 1
+        }
+      },
+      "total_need_cut": 12400.0
+    },
+    {
+      "job": 28,
+      "materialprop": "CSC+SPCE-SD+3.2",
+      "code": "CSC SPCE-SD 3.2",
+      "available_stock_qty": {
+        "NQS": 17265.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 13580.0,
+          "len_fg_codes": 1
+        }
+      },
+      "total_need_cut": 13580.0
+    },
+    {
+      "job": 29,
+      "materialprop": "POSCOVST+SUS409L-2D+2.0",
+      "code": "POSCOVST SUS409L-2D 2.0",
+      "available_stock_qty": {
+        "NQS": 21301.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 14736.0,
+          "len_fg_codes": 7
+        }
+      },
+      "total_need_cut": 14736.0
+    },
+    {
+      "job": 30,
+      "materialprop": "CSC+JSC590R-SD+1.6",
+      "code": "CSC JSC590R-SD 1.6",
+      "available_stock_qty": {
+        "HSC": 53179.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 18748.8,
+          "len_fg_codes": 5
+        }
+      },
+      "total_need_cut": 18748.8
+    },
+    {
+      "job": 31,
+      "materialprop": "POSCOVN+SPCC-SD+2.0",
+      "code": "POSCOVN SPCC-SD 2.0",
+      "available_stock_qty": {
+        "HSC": 60915.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 13304.38,
+          "len_fg_codes": 6
+        },
+        "medium": {
+          "total_need_cut": 5635.0,
+          "len_fg_codes": 5
+        }
+      },
+      "total_need_cut": 18939.379999999997
+    },
+    {
+      "job": 32,
+      "materialprop": "CSC+CH1751Z-F 20/20+1.0",
+      "code": "CSC CH1751Z-F 20/20 1.0",
+      "available_stock_qty": {
+        "HSC": 39110.0
+      },
+      "tasks": {
+        "medium": {
+          "total_need_cut": 19946.0,
+          "len_fg_codes": 10
+        }
+      },
+      "total_need_cut": 19946.0
+    },
+    {
+      "job": 33,
+      "materialprop": "POSCOVN+SPCC-SD+1.2",
+      "code": "POSCOVN SPCC-SD 1.2",
+      "available_stock_qty": {
+        "HSC": 80392.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 6834.0,
+          "len_fg_codes": 11
+        },
+        "medium": {
+          "total_need_cut": 15281.0,
+          "len_fg_codes": 11
+        }
+      },
+      "total_need_cut": 22115.0
+    },
+    {
+      "job": 34,
+      "materialprop": "POSCOVN+SPCC-SD+1.4",
+      "code": "POSCOVN SPCC-SD 1.4",
+      "available_stock_qty": {
+        "HSC": 60191.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 10401.0,
+          "len_fg_codes": 11
+        },
+        "medium": {
+          "total_need_cut": 14057.0,
+          "len_fg_codes": 12
+        }
+      },
+      "total_need_cut": 24458.0
+    },
+    {
+      "job": 35,
+      "materialprop": "POSCOVST+SUS409L-2D+1.2",
+      "code": "POSCOVST SUS409L-2D 1.2",
+      "available_stock_qty": {
+        "HSC": 113548.0,
+        "NQS": 131263.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 29449.0,
+          "len_fg_codes": 16
+        },
+        "medium": {
+          "total_need_cut": 12421.0,
+          "len_fg_codes": 4
+        }
+      },
+      "total_need_cut": 41870.0
+    },
+    {
+      "job": 36,
+      "materialprop": "POSCOVST+SUS409L-2D+1.0",
+      "code": "POSCOVST SUS409L-2D 1.0",
+      "available_stock_qty": {
+        "HSC": 82797.0,
+        "NQS": 177547.0
+      },
+      "tasks": {
+        "small": {
+          "total_need_cut": 54722.0,
+          "len_fg_codes": 11
+        },
+        "medium": {
+          "total_need_cut": 75292.0,
+          "len_fg_codes": 19
+        }
+      },
+      "total_need_cut": 130014.0
+    }
+  ]
+}
