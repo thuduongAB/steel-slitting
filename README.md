@@ -10,6 +10,9 @@ This repository demonstrates how to set up a Python environment using an `enviro
   - **data**
     - SlitRequestSRO-1117.csv
     - Stock End Details_Jan.xlsx
+  - **results**
+  - **jobs**
+  - **log**
   - **src**
     - **model**
       - __init__.py
