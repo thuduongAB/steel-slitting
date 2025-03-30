@@ -5,28 +5,23 @@ The Cutting Stock Problem deals with the problem of cutting stock material with 
 This repository demonstrates how to set up a Python environment using an `environment.yml` file and run Python tasks with `pytask`.
 
 ## Project Directory
+- **steel-slitting**
+  - **.pytask**
+  - **data**
+    - SlitRequestSRO-1117.csv
+    - Stock End Details_Jan.xlsx
+  - **src**
+    - **model**
+      - __init__.py
+      - config.py
+      - O41_dual_solver.py
+      - `<...>.py`
+      - config.py
+    - 11_etl.py
+    - `<...>.py`
+    - task_coil_steel_slitting.py
+  - pyproject.toml
 
-steel-slitting
-│
-├───.pytask
-│
-├───data
-│   ├───SlitRequestSRO-1117.csv
-│   └───Stock End Details_Jan.xlsx
-│
-├───src
-│   ├───model
-│   │   ├───__init__.py
-│   │   ├───config.py
-│   │   ├───O41_dual_solver.py
-│   │   ├───<...>.py
-│   │   └───config.py
-│   │
-│   ├───11_etl.py
-│   ├───<...>.py
-│   └───task_coil_steel_slitting.py
-│
-└───pyproject.toml
 
 ## Table of Contents
 - [Prerequisites](#prerequisites)
