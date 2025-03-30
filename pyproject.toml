@@ -1,0 +1,6 @@
+[project]
+name = "optimization"
+version = "0.6.1"
+
+[tool.pytask.ini_options]
+paths = ["src"]

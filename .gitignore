@@ -1,0 +1,10 @@
+# Ignore files
+*.xlsx
+*.csv
+*.json
+
+# Ignore Python compiled files
+*.pyc
+
+# Ignore log
+*.log
