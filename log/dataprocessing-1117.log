@@ -1,0 +1,366 @@
+INFO - $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+INFO - *** DATA PROCESSING ***
+INFO - Total Job:37
+INFO - MC CODE 0 POSCOVN+SPCC-SD+0.6
+INFO -   standard  count
+0    small      2
+INFO - MC CODE 1 CSC+SPCE-SD+1.2
+INFO -   standard  count
+0    small      1
+INFO - MC CODE 2 POSCOVST+SUS409L-2B+2.5
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 3 NSC+JSC270C-SD+2.9
+INFO -   standard  count
+0      big      1
+INFO - MC CODE 4 CSC+JSC440W-SD+1.4
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 5 CSVC+JSC440W-SD+1.4
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 6 POSCOVN+JSC270C-SD+2.0
+INFO -   standard  count
+0   medium      2
+INFO - MC CODE 7 POSCO+JSC270E-SD+2.9
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 8 CSC+CH1751Z-F 20/20+0.8
+INFO -   standard  count
+0   medium      2
+INFO - MC CODE 9 POSCOVN+SPCC-SD+0.8
+INFO -   standard  count
+0   medium      2
+1    small      1
+WARNING - merge small to medium
+INFO - MC CODE 10 CSC+JSC270E-SD+2.3
+INFO -   standard  count
+0   medium      1
+1    small      1
+WARNING - merge small to medium
+INFO - MC CODE 11 NSC+JNC270F 20/20+1.0
+INFO -   standard  count
+0   medium      2
+INFO - MC CODE 12 POSCOVN+JSC270C-SD+1.2
+INFO -   standard  count
+0   medium      5
+INFO - MC CODE 13 NSC+JSC270C-SD+3.2
+INFO -   standard  count
+0      big      1
+1   medium      2
+WARNING - merge med to big
+INFO - MC CODE 14 POSCO+JSC270C-SD+0.6
+INFO -   standard  count
+0    small      1
+INFO - MC CODE 15 CSC+JSC590R-SD+1.2
+INFO -   standard  count
+0    small      1
+INFO - MC CODE 16 NSC+JSC270C-SD+2.6
+INFO -   standard  count
+0    small      1
+INFO -   standard  count
+0    small      1
+INFO - MC CODE 17 CSC+SPCC-SD+3.2
+INFO -   standard  count
+0   medium      1
+INFO -   standard  count
+0   medium      1
+1    small      1
+WARNING - merge small to medium
+INFO - MC CODE 18 POSCOVN+JSC270C-SD+1.4
+INFO -   standard  count
+0   medium      4
+1    small      5
+WARNING - merge small to medium
+INFO -   standard  count
+0   medium      2
+INFO - MC CODE 19 CSC+JSC440W-SD+0.8
+INFO -   standard  count
+0    small      2
+INFO - MC CODE 20 CSC+CH1751Z-F 0/20+0.8
+INFO -   standard  count
+0   medium      1
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 21 NSC+JSC270E-SD+2.6
+INFO -   standard  count
+0    small      1
+INFO - MC CODE 22 POSCOVN+SPCC-SD+1.0
+INFO -   standard  count
+0   medium     15
+1    small      8
+INFO - MC CODE 23 CSC+SPCC-SD+2.3
+INFO -   standard  count
+0      big      3
+1   medium      3
+2    small      1
+WARNING - div medi them merge
+INFO - MC CODE 24 POSCOVN+SPCC-SD+1.6
+INFO -   standard  count
+0   medium     11
+1    small      9
+INFO - MC CODE 25 POSCOVST+SUS409L-2D+1.5
+INFO -   standard  count
+0   medium      2
+1    small     11
+WARNING - merge small to medium
+INFO - MC CODE 26 CSC+SPHC+8.0
+INFO -   standard  count
+0   medium      3
+INFO - MC CODE 27 CSC+JSC590R-SD+1.4
+INFO -   standard  count
+0    small      1
+INFO - MC CODE 28 CSC+SPCE-SD+3.2
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 29 POSCOVST+SUS409L-2D+2.0
+INFO -   standard  count
+0   medium      2
+1    small      7
+WARNING - merge small to medium
+INFO - MC CODE 30 CSC+JSC590R-SD+1.6
+INFO -   standard  count
+0    small      7
+INFO - MC CODE 31 POSCOVN+SPCC-SD+2.0
+INFO -   standard  count
+0   medium      5
+1    small      7
+INFO - MC CODE 32 CSC+CH1751Z-F 20/20+1.0
+INFO -   standard  count
+0   medium     10
+INFO - MC CODE 33 POSCOVN+SPCC-SD+1.2
+INFO -   standard  count
+0   medium     11
+1    small     12
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 34 POSCOVN+SPCC-SD+1.4
+INFO -   standard  count
+0   medium     12
+1    small     14
+INFO - MC CODE 35 POSCOVST+SUS409L-2D+1.2
+INFO -   standard  count
+0   medium      5
+1    small     18
+INFO - Empty DataFrame
+Columns: [standard, count]
+Index: []
+INFO - MC CODE 36 POSCOVST+SUS409L-2D+1.0
+INFO -   standard  count
+0   medium     20
+1    small     14
+INFO - Empty DataFrame
+Columns: [standard, count]
+Index: []
+INFO - $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+INFO - *** DATA PROCESSING ***
+INFO - Total Job:37
+INFO - MC CODE 0 POSCOVN+SPCC-SD+0.6
+INFO -   standard  count
+0    small      2
+INFO - MC CODE 1 CSC+SPCE-SD+1.2
+INFO -   standard  count
+0    small      1
+INFO - MC CODE 2 POSCOVST+SUS409L-2B+2.5
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 3 NSC+JSC270C-SD+2.9
+INFO -   standard  count
+0      big      1
+INFO - MC CODE 4 CSC+JSC440W-SD+1.4
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 5 CSVC+JSC440W-SD+1.4
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 6 POSCOVN+JSC270C-SD+2.0
+INFO -   standard  count
+0   medium      2
+INFO - MC CODE 7 POSCO+JSC270E-SD+2.9
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 8 CSC+CH1751Z-F 20/20+0.8
+INFO -   standard  count
+0   medium      2
+INFO - MC CODE 9 POSCOVN+SPCC-SD+0.8
+INFO -   standard  count
+0   medium      2
+1    small      1
+WARNING - merge small to medium
+INFO - MC CODE 10 CSC+JSC270E-SD+2.3
+INFO -   standard  count
+0   medium      1
+1    small      1
+WARNING - merge small to medium
+INFO - MC CODE 11 NSC+JNC270F 20/20+1.0
+INFO -   standard  count
+0   medium      2
+INFO - MC CODE 12 POSCOVN+JSC270C-SD+1.2
+INFO -   standard  count
+0   medium      5
+INFO - MC CODE 13 NSC+JSC270C-SD+3.2
+INFO -   standard  count
+0      big      1
+1   medium      2
+WARNING - merge med to big
+INFO - MC CODE 14 POSCO+JSC270C-SD+0.6
+INFO -   standard  count
+0    small      1
+INFO - MC CODE 15 CSC+JSC590R-SD+1.2
+INFO -   standard  count
+0    small      1
+INFO - MC CODE 16 NSC+JSC270C-SD+2.6
+INFO -   standard  count
+0    small      1
+INFO -   standard  count
+0    small      1
+INFO - MC CODE 17 CSC+SPCC-SD+3.2
+INFO -   standard  count
+0   medium      1
+INFO -   standard  count
+0   medium      1
+1    small      1
+WARNING - merge small to medium
+INFO - MC CODE 18 POSCOVN+JSC270C-SD+1.4
+INFO -   standard  count
+0   medium      4
+1    small      5
+WARNING - merge small to medium
+INFO -   standard  count
+0   medium      2
+INFO - MC CODE 19 CSC+JSC440W-SD+0.8
+INFO -   standard  count
+0    small      2
+INFO - MC CODE 20 CSC+CH1751Z-F 0/20+0.8
+INFO -   standard  count
+0   medium      1
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 21 NSC+JSC270E-SD+2.6
+INFO -   standard  count
+0    small      1
+INFO - MC CODE 22 POSCOVN+SPCC-SD+1.0
+INFO -   standard  count
+0   medium     15
+1    small      8
+INFO - MC CODE 23 CSC+SPCC-SD+2.3
+INFO -   standard  count
+0      big      3
+1   medium      3
+2    small      1
+WARNING - div medi them merge
+INFO - MC CODE 24 POSCOVN+SPCC-SD+1.6
+INFO -   standard  count
+0   medium     11
+1    small      9
+INFO - MC CODE 25 POSCOVST+SUS409L-2D+1.5
+INFO -   standard  count
+0   medium      2
+1    small     11
+WARNING - merge small to medium
+INFO - MC CODE 26 CSC+SPHC+8.0
+INFO -   standard  count
+0   medium      3
+INFO - MC CODE 27 CSC+JSC590R-SD+1.4
+INFO -   standard  count
+0    small      1
+INFO - MC CODE 28 CSC+SPCE-SD+3.2
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 29 POSCOVST+SUS409L-2D+2.0
+INFO -   standard  count
+0   medium      2
+1    small      7
+WARNING - merge small to medium
+INFO - MC CODE 30 CSC+JSC590R-SD+1.6
+INFO -   standard  count
+0    small      7
+INFO - MC CODE 31 POSCOVN+SPCC-SD+2.0
+INFO -   standard  count
+0   medium      5
+1    small      7
+INFO - MC CODE 32 CSC+CH1751Z-F 20/20+1.0
+INFO -   standard  count
+0   medium     10
+INFO - MC CODE 33 POSCOVN+SPCC-SD+1.2
+INFO -   standard  count
+0   medium     11
+1    small     12
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 34 POSCOVN+SPCC-SD+1.4
+INFO -   standard  count
+0   medium     12
+1    small     14
+INFO - MC CODE 35 POSCOVST+SUS409L-2D+1.2
+INFO -   standard  count
+0   medium      5
+1    small     18
+INFO - Empty DataFrame
+Columns: [standard, count]
+Index: []
+INFO - MC CODE 36 POSCOVST+SUS409L-2D+1.0
+INFO -   standard  count
+0   medium     20
+1    small     14
+INFO - Empty DataFrame
+Columns: [standard, count]
+Index: []
+INFO - $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+INFO - *** DATA PROCESSING ***
+INFO - Total Job:37
+INFO - MC CODE 0 POSCOVN+SPCC-SD+0.6
+INFO -   standard  count
+0    small      2
+INFO - MC CODE 1 CSC+SPCE-SD+1.2
+INFO -   standard  count
+0    small      1
+INFO - MC CODE 2 POSCOVST+SUS409L-2B+2.5
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 3 NSC+JSC270C-SD+2.9
+INFO -   standard  count
+0      big      1
+INFO - MC CODE 4 CSC+JSC440W-SD+1.4
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 5 CSVC+JSC440W-SD+1.4
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 6 POSCOVN+JSC270C-SD+2.0
+INFO -   standard  count
+0   medium      2
+INFO - MC CODE 7 POSCO+JSC270E-SD+2.9
+INFO -   standard  count
+0   medium      1
+INFO - MC CODE 8 CSC+CH1751Z-F 20/20+0.8
+INFO -   standard  count
+0   medium      2
+INFO - MC CODE 9 POSCOVN+SPCC-SD+0.8
+INFO -   standard  count
+0   medium      2
+1    small      1
+WARNING - merge small to medium
+INFO - MC CODE 10 CSC+JSC270E-SD+2.3
+INFO -   standard  count
+0   medium      1
+1    small      1
+WARNING - merge small to medium
+INFO - MC CODE 11 NSC+JNC270F 20/20+1.0
+INFO -   standard  count
+0   medium      2
+INFO - MC CODE 12 POSCOVN+JSC270C-SD+1.2
+INFO -   standard  count
+0   medium      5
+INFO - MC CODE 13 NSC+JSC270C-SD+3.2
+INFO -   standard  count
+0      big      1
+1   medium      2
+WARNING - merge med to big
+INFO - MC CODE 14 POSCO+JSC270C-SD+0.6
+INFO -   standard  count
+0    small      1
+INFO - MC CODE 15 CSC+JSC590R-SD+1.2
+INFO -   standard  count
+0    small      1
+INFO - MC CODE 16 NSC+JSC270C-SD+2.6
