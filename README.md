@@ -11,21 +11,20 @@ steel-slitting
 ├───.pytask
 │
 ├───data
-│   ├────SlitRequestSRO-1117.csv
-│   └────Stock End Details_Jan.xlsx
-|
+│   ├───SlitRequestSRO-1117.csv
+│   └───Stock End Details_Jan.xlsx
 │
 ├───src
 │   ├───model
-│   |    ├────__init__.py
-│   |    ├────config.py
-│   |    ├────O41_dual_solver.py
-│   |    ├────<...>.py
-│   |    └────config.py
-|   |
-│   ├────11_etl.py
-|   ├────<...>.py
-│   └────task_coil_steel_slitting.py
+│   │   ├───__init__.py
+│   │   ├───config.py
+│   │   ├───O41_dual_solver.py
+│   │   ├───<...>.py
+│   │   └───config.py
+│   │
+│   ├───11_etl.py
+│   ├───<...>.py
+│   └───task_coil_steel_slitting.py
 │
 └───pyproject.toml
 
