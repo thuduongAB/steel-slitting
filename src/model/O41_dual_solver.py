@@ -10,8 +10,8 @@ from pulp import LpMaximize, LpMinimize, LpProblem,LpAffineExpression, LpVariabl
 global stop_stock_ratio
 global stop_needcut_wg
 
-stop_stock_ratio = float(os.getenv('STOP_STOCK_RATIO', '-0.03'))
-stop_needcut_wg = -90
+stop_stock_ratio        = -float(os.getenv('ST_RATIO', '0.03'))
+stop_needcut_wg         = -float(os.getenv('STOP_NEEDCUT_WG', '90'))
 
 # DEFINE PROBLEM
 class DualProblem:
@@ -347,7 +347,7 @@ class DualProblem:
                 self.probstt = "Infeasible"
         except KeyError: self.probstt = "Infeasible" # khong co nghiem
         
-    def cbc_optimize_cut(self):
+    def cbc_optimize_cut(self,retry):
         # Sets
         # S = list(self.chosen_stocks.keys())
         P = list(range(len(self.filtered_patterns)))
@@ -385,7 +385,10 @@ class DualProblem:
         try: # Extract results        
             # Take ALL SUB-OPTIMAL solutions
             # for var in [0.8, 0.5, 0.3, 0.2, 0.1]:
-            for var in [0.5,0.3,0.1]:
+            if retry < 1:
+                var_list = [0.6,0.4,0.2,0.1]
+            else: var_list = [0.1, 0.05]
+            for var in var_list:
                 solution = [1 if x[i].varValue >= var else 0 for i in range(len(self.filtered_patterns))]
                 if sum(solution) > 0:
                     break
@@ -443,7 +446,7 @@ class DualProblem:
                 self.final_solution_patterns.append(solution_pattern)
     
     # RUN FLOW 4 PHASES    
-    def run(self, solver):
+    def run(self, solver, retry):
         #Phase 1
         self.create_finish_demand_by_line_w_naive_pattern()
         
@@ -455,7 +458,7 @@ class DualProblem:
         
         #Phase 4
         if solver == "CBC":
-            self.cbc_optimize_cut()
+            self.cbc_optimize_cut(retry)
         else:
             self.optimize_cut()
         
