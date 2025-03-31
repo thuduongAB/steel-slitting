@@ -39,7 +39,7 @@ overloaded_total_fg_codes = float(os.getenv('OVERLOADED_TOTAL_FG_CODES', '15'))
 sub_overloaded_total_fg_codes = float(os.getenv('SUB_OVERLOADED_TOTAL_FG_CODES', '9'))
 
 ### --- PARAMETER SETTING ---fvc
-i = 34
+i = 33
 uat = int(os.getenv('UAT', '0000'))
 mc_ratio = float(os.getenv('MC_RATIO', '2.5'))
 added_stock_ratio = int(os.getenv('ADDED_STOCK_RATIO', '10'))/100
@@ -285,6 +285,9 @@ for finish_item in finish_list['materialprop_finish'][materialprop_set]['group']
         
         # Get BEGINNING FINISH -COIL CENTER list
         all_finish = finish_item[standard_group]['FG_set']  # original finish with stock ratio < 0.5 (need cut can be positive)
+        if standard_group == "medium" and len(moved_standard_finish) > 0:
+                all_finish.update(moved_standard_finish)
+                logger.info(f">>> Merge un-cut {len(moved_standard_finish)} FG into medium group")
 
         avalaible_coil_center = [k for k, _ in available_stock_qty.items()]
         logger.info(f"### COIL CENTER HAVING STOCK TO CHOOSE: {avalaible_coil_center}")
@@ -302,8 +305,6 @@ for finish_item in finish_list['materialprop_finish'][materialprop_set]['group']
             logger.warning("NO FG to cut")
             pass # -> go to next gr
         else:
-            if standard_group == "medium":
-                finish.update(moved_standard_finish)
             #STOCK BY STANDARD
             stocks_by_standard = copy.deepcopy(filter_stocks_by_group_standard(finish, stocks_to_use))
             logger.info(f"All finished good to cut {len(finish)} by standard with {len(stocks_by_standard)} stocks ")
@@ -498,6 +499,7 @@ for finish_item in finish_list['materialprop_finish'][materialprop_set]['group']
                                                                         "stock_weight": steel.taken_stocks[taken_stock_key]['weight'],
                                                                         "fg_code":{f: subfinish[f]['fg_codes'] for f in steel.cuts_dict.keys()},
                                                                         "Customer": {f: subfinish[f]['customer_name'] for f in steel.cuts_dict.keys()},
+                                                                        "receiving_date":steel.taken_stocks[taken_stock_key]['receiving_date'],
                                                                         'cuts': steel.cuts_dict,
                                                                         "FG Weight": weight_dict,
                                                                         "FG width": {f: subfinish[f]['width'] for f in steel.cuts_dict.keys()},
@@ -563,6 +565,7 @@ for finish_item in finish_list['materialprop_finish'][materialprop_set]['group']
                                     "inventory_id": "",
                                     "stock_width":  "",
                                     "stock_weight": "",
+                                    'receiving_date':"",
                                     "cutting_date":"",
                                     "trim_loss":"" , 
                                     "trim_loss_pct": "",
@@ -584,6 +587,11 @@ for finish_item in finish_list['materialprop_finish'][materialprop_set]['group']
                                 cleaned_materialprop_set = clean_filename(materialprop_set)
                                 filename = f"results/UATresult-{uat}-job{i}-{group_name}-nosolution.xlsx"
                                 df = flattern_data(no_solution)
+                                df = df[['stock', 'inventory_id', 'stock_weight', 'stock_width',  
+                                            'receiving_date','explanation', 'remarks', 'cutting_date',
+                                            'trim_loss', 'trim_loss_pct', 'fg_code', 'Customer', 'FG Weight',
+                                            'FG width', 'standard', 'Min weight', 'Max weight', 'average_fc',
+                                            '1st Priority', 'cuts', 'lines']]
                                 df['time'] = end_time - start_time
                                 if os.path.isfile(filename):
                                     with pd.ExcelWriter(filename, engine='openpyxl', mode='a',if_sheet_exists='overlay') as writer:
@@ -599,6 +607,11 @@ for finish_item in finish_list['materialprop_finish'][materialprop_set]['group']
                                 cleaned_materialprop_set = clean_filename(materialprop_set)
                                 filename = f"results/UATresult-{uat}-job{i}-{group_name}-{coil_center}.xlsx"
                                 df = transform_to_df(final_solution_patterns)
+                                df = df[['stock', 'inventory_id', 'stock_weight', 'stock_width',  
+                                            'receiving_date','explanation', 'remarks', 'cutting_date',
+                                            'trim_loss', 'trim_loss_pct', 'fg_code', 'Customer', 'FG Weight',
+                                            'FG width', 'standard', 'Min weight', 'Max weight', 'average_fc',
+                                            '1st Priority', 'cuts', 'lines']]
                                 df['time'] = end_time - start_time
                                 if os.path.isfile(filename):
                                     with pd.ExcelWriter(filename, engine='openpyxl', mode='a',if_sheet_exists='overlay') as writer:
@@ -643,7 +656,13 @@ for finish_item in finish_list['materialprop_finish'][materialprop_set]['group']
                                 if retry_inner_count < 2:
                                     logger.info(f"Stay in {inner_coil_center_order[icc]} to find other coil {retry_inner_count} times")
                                     break
-                                else: raise OutOfStocks
+                                else: 
+                                    logger.info(f'Stop try in {inner_coil_center_order[icc]}')
+                                    # MOVE NOT-FULLY CUT FG IN THIS SUBGROUP TO MEDIUM
+                                    moved_standard_finish.update(moved_subfinish)
+                                    if len(moved_standard_finish) > 0:
+                                        logger.info(f"Move to medium group to cut {len(moved_standard_finish)} FGs ")
+                                    raise OutOfStocks
                                 
                             if next_inner_coil_center_priority_cond:
                                 # refresh coil center and fg to cut in new coil center
@@ -687,6 +706,8 @@ for finish_item in finish_list['materialprop_finish'][materialprop_set]['group']
 
             # MOVE NOT-FULLY CUT FG IN THIS SUBGROUP TO MEDIUM
             moved_standard_finish.update(moved_subfinish)
+            if len(moved_standard_finish) > 0:
+                logger.info(f"Move to medium group to cut {len(moved_standard_finish)} FGs ")
 
     except OutOfStocks: 
             continue

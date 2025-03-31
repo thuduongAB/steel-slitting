@@ -46,7 +46,7 @@ class LinearProblem:
     width_s_min_margin = self.stock[self.skey]['width'] - self.stock[self.skey]['min_margin']
     width_f = {f: self.finish[f]["width"] for f in self.finish.keys()}
     # wu = self.stock[0]['weight'] / self.stock[0]['width']
-    a_upper_bound = {f: max([self.patterns[i]['cuts'][f] for i, _ in enumerate(self.patterns)]) for f in self.finish.keys()}
+    a_upper_bound = {f: max([self.patterns[i]['cuts'][f] for i, _ in enumerate(self.patterns)], default=0) for f in self.finish.keys()}
 
     # Decision variables
     a = {f: LpVariable(f'a[{f}]', lowBound=0, upBound=a_upper_bound[f], cat='Integer') for f in F}
@@ -119,6 +119,7 @@ class CuttingOneStock:
                                         'inventory_id': self.prob.skey, 
                                         'stock_weight': self.prob.stock[self.prob.skey]['weight'], 
                                         'stock_width': self.prob.stock[self.prob.skey]['width'], 
+                                        "receiving_date":self.prob.stock[self.prob.skey]['receiving_date'],
                                         'trim_loss': round(trim_loss,3), 
                                         'trim_loss_pct': round(trim_loss_pct,3),
                                           'cuts':cuts_dict,

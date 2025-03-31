@@ -277,8 +277,9 @@ for i in range(n_jobs):
             
             # Get BEGINNING FINISH -COIL CENTER list
             all_finish = finish_item[standard_group]['FG_set']  # original finish with stock ratio < 0.1 (need cut can be positive)
-            if standard_group == "medium":
+            if standard_group == "medium" and len(moved_standard_finish) > 0:
                 all_finish.update(moved_standard_finish)
+                logger.info(f">>> Merge un-cut {len(moved_standard_finish)} FG into medium group")
 
             avalaible_coil_center = [k for k, _ in available_stock_qty.items()]
             logger.info(f"### COIL CENTER HAVING STOCK TO CHOOSE: {avalaible_coil_center}")
@@ -481,6 +482,7 @@ for i in range(n_jobs):
                                                                             "inventory_id": re.sub(r"-Se\d+", "", taken_stock_key),
                                                                             "stock_width":  steel.taken_stocks[taken_stock_key]['width'],
                                                                             "stock_weight": steel.taken_stocks[taken_stock_key]['weight'],
+                                                                            "receiving_date":steel.taken_stocks[taken_stock_key]['receiving_date'],
                                                                             "fg_code":{f: subfinish[f]['fg_codes'] for f in steel.cuts_dict.keys()},
                                                                             "Customer": {f: subfinish[f]['customer_name'] for f in steel.cuts_dict.keys()},
                                                                             'cuts': steel.cuts_dict,
@@ -548,6 +550,7 @@ for i in range(n_jobs):
                                         "inventory_id": "",
                                         "stock_width":  "",
                                         "stock_weight": "",
+                                        "receiving_date":"",
                                         "cutting_date":"",
                                         "trim_loss":"" , 
                                         "trim_loss_pct": "",
@@ -569,11 +572,17 @@ for i in range(n_jobs):
                                     cleaned_materialprop_set = clean_filename(materialprop_set)
                                     filename = f"results/UATresult-{uat}-job{i}-{group_name}-nosolution.xlsx"
                                     df = flattern_data(no_solution)
+                                    df = df[['stock', 'inventory_id', 'stock_weight', 'stock_width',  
+                                            'receiving_date','explanation', 'remarks', 'cutting_date',
+                                            'trim_loss', 'trim_loss_pct', 'fg_code', 'Customer', 'FG Weight',
+                                            'FG width', 'standard', 'Min weight', 'Max weight', 'average_fc',
+                                            '1st Priority', 'cuts', 'lines']]
                                     df['time'] = end_time - start_time
                                     if os.path.isfile(filename):
                                         with pd.ExcelWriter(filename, engine='openpyxl', mode='a',if_sheet_exists='overlay') as writer:
                                             df.to_excel(writer, sheet_name='Sheet1', index=False)
                                     else: df.to_excel(filename, index=False)
+                                    logger.warning(f"MC CODE {materialprop_set} for {group_name} saved EXCEL file")
                                 else: 
                                     # UPDATE USED STOCK AND REMAINING NEEDCUT
                                     total_taken_stocks.append(taken_stocks)
@@ -584,6 +593,11 @@ for i in range(n_jobs):
                                     cleaned_materialprop_set = clean_filename(materialprop_set)
                                     filename = f"results/UATresult-{uat}-job{i}-{group_name}-{coil_center}.xlsx"
                                     df = transform_to_df(final_solution_patterns)
+                                    df = df[['stock', 'inventory_id', 'stock_weight', 'stock_width',  
+                                            'receiving_date','explanation', 'remarks', 'cutting_date',
+                                            'trim_loss', 'trim_loss_pct', 'fg_code', 'Customer', 'FG Weight',
+                                            'FG width', 'standard', 'Min weight', 'Max weight', 'average_fc',
+                                            '1st Priority', 'cuts', 'lines']]
                                     df['time'] = end_time - start_time
                                     if os.path.isfile(filename):
                                         with pd.ExcelWriter(filename, engine='openpyxl', mode='a',if_sheet_exists='overlay') as writer:
@@ -627,7 +641,13 @@ for i in range(n_jobs):
                                     if retry_inner_count < 2:
                                         logger.info(f"Stay in {inner_coil_center_order[icc]} to find other coil {retry_inner_count} times")
                                         break
-                                    else: raise OutOfStocks
+                                    else:
+                                        logger.info(f'Stop try in {inner_coil_center_order[icc]}')
+                                        # MOVE NOT-FULLY CUT FG IN THIS SUBGROUP TO MEDIUM
+                                        moved_standard_finish.update(moved_subfinish)
+                                        if len(moved_standard_finish) > 0:
+                                            logger.info(f"Move to medium group to cut {len(moved_standard_finish)} FGs ")
+                                        raise OutOfStocks
                                     
                                 if next_inner_coil_center_priority_cond:
                                     coil_center = inner_coil_center_order[icc]

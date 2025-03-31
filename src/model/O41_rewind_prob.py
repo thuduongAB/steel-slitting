@@ -131,6 +131,7 @@ class RewindProb(DualProblem):
       trim_loss_pct = round(trim_loss/self.dual_stocks[self.stock_key]['width'] * 100, 3)
       self.final_solution_patterns = [{"stock":f'{self.stock_key}-Re{1}',
                                     "inventory_id": self.stock_key,
+                                    "receiving_date":self.dual_stocks[self.stock_key]['receiving_date'],
                                     'stock_weight': self.rewind_weight, 
                                     'stock_width': self.og_width,
                                     "cuts": self.optimal_pattern,

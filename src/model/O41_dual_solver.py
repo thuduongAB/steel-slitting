@@ -279,7 +279,7 @@ class DualProblem:
         self.opti_finish = {
                 f: {**f_info}
                 for f, f_info in self.dual_finish.items()
-                if max([self.filtered_patterns[i]['cuts'][f] for i, _ in enumerate(self.filtered_patterns)], default=0) > 0
+                if max([self.filtered_patterns[i]['cuts'][f] for i, _ in enumerate(self.filtered_patterns)], default = 0) > 0
             }
     
     # PHASE 4: Optimize WEIGHT Patterns    
@@ -387,7 +387,7 @@ class DualProblem:
             # for var in [0.8, 0.5, 0.3, 0.2, 0.1]:
             if retry < 1:
                 var_list = [0.6,0.4,0.2,0.1]
-            else: var_list = [0.1, 0.05]
+            else: var_list = [0.1, 0.07]
             for var in var_list:
                 solution = [1 if x[i].varValue >= var else 0 for i in range(len(self.filtered_patterns))]
                 if sum(solution) > 0:
