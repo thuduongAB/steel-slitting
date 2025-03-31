@@ -16,8 +16,8 @@ global stop_stock_ratio
 global stop_needcut_wg
 
 customer_group = ['small','small-medium']
-stop_stock_ratio = float(os.getenv('STOP_STOCK_RATIO', '-0.03'))
-stop_needcut_wg = float(os.getenv('STOP_NEEDCUT_WG', '-90'))
+stop_stock_ratio = -float(os.getenv('STOP_STOCK_RATIO', '0.03'))
+stop_needcut_wg = -float(os.getenv('STOP_NEEDCUT_WG', '90'))
 max_coil_weight2 = float(os.getenv('MAX_WEIGHT_MC_DIV_2', '7000'))
 max_coil_weight3 = float(os.getenv('MAX_WEIGHT_MC_DIV_3', '10000'))
 
@@ -410,9 +410,9 @@ class CuttingStocks:
                 self.over_cut_ratio[k] = round(self.over_cut[k]/(self.F.finish[k]['average FC']+1),3)
         else: pass # ko co nghiem
             
-    def solve_prob(self, solver):
+    def solve_prob(self, solver, retry):
         # Run and calculate results
-        self.prob.run(solver)
+        self.prob.run(solver,retry)
         self.calculate_finish_after_cut()
         return self.prob.probstt, self.prob.final_solution_patterns, self.over_cut
 
@@ -447,6 +447,7 @@ class CuttingStocks:
 
     def refresh_finish(self):
         # Take only finish with negative need_cut or stock ratio low
+        re_finish = dict()
         re_finish = {k: v for k, v in self.prob.dual_finish.items() 
                         if self.over_cut_ratio[k] < stop_stock_ratio 
                         or self.over_cut[k] < stop_needcut_wg}
