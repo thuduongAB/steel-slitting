@@ -24,22 +24,24 @@ global max_bound, mc_ratio, stock_ratio, bound_step
 global added_stock_ratio_avg_fc
 global starting_bound
 global stop_stock_ratio, stop_needcut_wg
+global retry_inner_count
 global overloaded_total_need_cut, overloaded_total_fg_codes, max_coil_weight
+
+added_stock_ratio_avg_fc = [3000, 2000, 1000, 500 ,100]
+stop_stock_ratio        = -float(os.getenv('STOP_STOCK_RATIO', '0.03'))
+stop_needcut_wg         = -float(os.getenv('STOP_NEEDCUT_WG', '90'))
 
 max_coil_weight         = float(os.getenv('MAX_WEIGHT_MC_DIV_2', '7000'))
 max_bound               = float(os.getenv('MAX_BOUND', '3.0'))
-stop_stock_ratio = float(os.getenv('ST_RATIO', '-0.03'))
-added_stock_ratio_avg_fc = [3000, 2000, 1000, 500 ,100]
-bound_step = 0.5
-stop_needcut_wg  = -90
-overloaded_total_need_cut = 29000
-overloaded_total_fg_codes = 15
-sub_overloaded_total_fg_codes = 9
+bound_step              = float(os.getenv('BOUND_STEP', '0.5'))
+overloaded_total_need_cut = float(os.getenv('OVERLOADED_TOTAL_NEEDCUT', '29000'))
+overloaded_total_fg_codes = float(os.getenv('OVERLOADED_TOTAL_FG_CODES', '15'))
+sub_overloaded_total_fg_codes = float(os.getenv('SUB_OVERLOADED_TOTAL_FG_CODES', '9'))
 
 ### --- PARAMETER SETTING ---fvc
-i = 24
+i = 34
 uat = int(os.getenv('UAT', '0000'))
-mc_ratio = int(os.getenv('MC_RATIO', '2.5'))
+mc_ratio = float(os.getenv('MC_RATIO', '2.5'))
 added_stock_ratio = int(os.getenv('ADDED_STOCK_RATIO', '10'))/100
 # mc_ratio = 2.5
 # added_stock_ratio = 0.1
@@ -87,7 +89,7 @@ def onestock_cut(logger, finish, stocks, MATERIALPROPS, margin_df):
     else:
         return final_solution_patterns, over_cut, taken_stocks , {} #over-cut aam
 
-def multistocks_cut(logger, finish, stocks, MATERIALPROPS, margin_df, prob_type):
+def multistocks_cut(retry_inner_count, logger, finish, stocks, MATERIALPROPS, margin_df, prob_type ):
     """
     to cut all possible stock with finish demand upto upperbound
     """
@@ -109,7 +111,7 @@ def multistocks_cut(logger, finish, stocks, MATERIALPROPS, margin_df, prob_type)
     while cond == True: # have stocks and need cut #NO.1
         print("CUTTING DUAL... ")
         len_last_sol = copy.deepcopy(len(final_solution_patterns))
-        stt, final_solution_patterns, over_cut = steel.solve_prob("CBC") # neu ko reset, thi final_solution_patterns ket qua se duoc accumulate
+        stt, final_solution_patterns, over_cut = steel.solve_prob("CBC", retry_inner_count) # neu ko reset, thi final_solution_patterns ket qua se duoc accumulate
         
         # Check solution_patterns - True if patterns empty and new pattern list == old pattern list
         check_solution_patterns = (not final_solution_patterns or len(final_solution_patterns) == len_last_sol)
@@ -215,6 +217,17 @@ class OutOfStocks(Exception):
 
 class NoDualSolution(Exception):
     pass
+
+########################## CLEAR FILES ##############################
+# Set the directory containing the Excel files
+folder_path = 'results'
+# Get a list of all Excel files in the folder
+excel_files = [f for f in os.listdir(folder_path) if f.endswith('.xlsx') and f.startswith(f"UATresult-{uat}-job{i}")]
+
+for file in excel_files:
+    file_path = os.path.join(folder_path, file)
+    os.remove(file_path)
+    print(f"Deleted file: {file_path}")
 
 ########################## START ##############################
 today = datetime.today()
@@ -435,7 +448,7 @@ for finish_item in finish_list['materialprop_finish'][materialprop_set]['group']
                                         
                                     else:
                                         logger.info("*** NORMAL DUAL MULTI Case ***")
-                                        final_solution_patterns, over_cut, taken_stocks, taken_stocks_dict = multistocks_cut(**args_dict, prob_type ="Dual")
+                                        final_solution_patterns, over_cut, taken_stocks, taken_stocks_dict = multistocks_cut(retry_inner_count,**args_dict, prob_type ="Dual")
 
                                     ### Exclude taken_stocks out of stock_to_use only for dividing MC
                                     stocks_to_use = refresh_stocks(taken_stocks, taken_stocks_dict, stocks_to_use)
@@ -523,7 +536,7 @@ for finish_item in finish_list['materialprop_finish'][materialprop_set]['group']
                                             'margin_df': margin_df,
                                             }
                                         try:
-                                            final_solution_patterns, over_cut, taken_stocks, remained_stocks = multistocks_cut(**rewind_args_dict, prob_type="Rewind")
+                                            final_solution_patterns, over_cut, taken_stocks, remained_stocks = multistocks_cut(retry_inner_count, **rewind_args_dict, prob_type="Rewind")
                                             taken_stocks_dict = {p['stock']: p['stock_weight'] for p in final_solution_patterns}
                                             logger.info(f"REMAINED stocks: {[remained_stocks.keys()]}")
                                             filtered_stocks_by_wh.pop(list(partial_stocks.keys())[0]) # truong hop ko cat duoc 
@@ -569,7 +582,7 @@ for finish_item in finish_list['materialprop_finish'][materialprop_set]['group']
                                 # --- SAVE DF to EXCEL ---
                                 end_time = time.time()
                                 cleaned_materialprop_set = clean_filename(materialprop_set)
-                                filename = f"scr/results/UATresult-{uat}-job{i}-{group_name}-nosolution.xlsx"
+                                filename = f"results/UATresult-{uat}-job{i}-{group_name}-nosolution.xlsx"
                                 df = flattern_data(no_solution)
                                 df['time'] = end_time - start_time
                                 if os.path.isfile(filename):
@@ -584,7 +597,7 @@ for finish_item in finish_list['materialprop_finish'][materialprop_set]['group']
                                 # --- SAVE DF to EXCEL ---
                                 end_time = time.time()
                                 cleaned_materialprop_set = clean_filename(materialprop_set)
-                                filename = f"scr/results/UATresult-{uat}-job{i}-{group_name}-{coil_center}.xlsx"
+                                filename = f"results/UATresult-{uat}-job{i}-{group_name}-{coil_center}.xlsx"
                                 df = transform_to_df(final_solution_patterns)
                                 df['time'] = end_time - start_time
                                 if os.path.isfile(filename):

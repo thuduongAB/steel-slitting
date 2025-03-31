@@ -2,7 +2,7 @@
 import pandas as pd
 import numpy as np
 import json
-import datetime
+from datetime import datetime
 import warnings
 import math
 import copy
@@ -223,6 +223,7 @@ logging.basicConfig(filename=f'log/dataprocessing-{uat}.log', level=logging.INFO
 
 logger.info("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
 logger.info('*** DATA PROCESSING ***')
+logger.info(f'*** DATE {datetime.today().strftime('%Y-%m-%d')} ***')
 
 materialprops, n_jobs = find_materialprops_and_jobs(fin_file_path =fin_file_path, mc_file_path = mc_file_path)
 logger.info(f"Total Job:{n_jobs}")

@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import os
 from datetime import datetime
+import warnings
+warnings.simplefilter("ignore", UserWarning)
 
 uat = int(os.getenv('UAT'))
 # uat = int(1117)
@@ -35,7 +37,7 @@ finish_csv["Customer_FG"] = (finish_csv['Customer'].astype(object)+"-"+finish_cs
 finish_csv['Stockend Qt'] = finish_csv['Stockend Qt'].astype(float)
 
 # STOCK END
-stock_end = pd.read_excel(f"data/Stock End Details_{month}.xlsx")
+stock_end = pd.read_excel(f"data/Stock End Details_{month}.xlsx",engine='openpyxl')
 stock_end.drop(columns=['(Do Not Modify) Row Checksum','(Do Not Modify) Modified On','(Do Not Modify) StockEndDetail',
 '(Do Not Modify) Modified On','(Do Not Modify) Row Checksum','BP Code'],inplace=True)
 stock_end.rename(columns={"Customer Short Name (BP Code) (Customer Master)":"Customer",
@@ -57,7 +59,8 @@ merged_stock_end_filtered = merged_stock_end[~merged_stock_end['Customer_FG'].is
 concatenated_po = pd.concat([finish_csv, merged_stock_end_filtered], ignore_index=True)
 
 # COIL CENTER PRIORITY
-coil_center_prio = pd.read_excel("data/master/Coil Center Priorities.xlsx")
+coil_center_prio = pd.read_excel("data/master/Coil Center Priorities.xlsx",engine='openpyxl')
+coil_center_prio.rename(columns={'Customer Short Name':"Customer"},inplace=True)
 coil_center_prio['3rd Priority'] = coil_center_prio['3rd Priority'].astype("object")
 coil_center_prio['1st Priority'] = coil_center_prio['1st Priority'].astype("object")
 coil_center_prio['2nd Priority'] = coil_center_prio['2nd Priority'].astype("object")
@@ -67,7 +70,7 @@ coil_center_prio.drop(columns=['Standard'], inplace = True)
 coil_center_prio['Standard'] = coil_center_prio['Calculate Standard'].str.lower()
 coil_center_prio.drop(columns=['Calculate Standard'], inplace = True)
 coil_center_prio["Customer_FG"] = (coil_center_prio['Customer'].astype(object)+"-"+coil_center_prio['FG Code'].astype(object))
-# coil_center_prio.drop(columns=['BP code'],inplace=True)
+coil_center_prio.drop(columns=['BP code'],inplace=True)
 coil_center_prio = coil_center_prio.apply(lambda col: col.fillna('') if col.dtype == 'object' else col.fillna(np.nan))
 
 # Merge the DataFrames on the 'Key' column
@@ -82,25 +85,26 @@ for col in coil_center_prio.columns:
 merged_concatenated_po.columns = [col.replace('_po', '') for col in merged_concatenated_po.columns]
 
 # FORECAST
-forecast = pd.read_excel(f"data/Forecast from Client_{month}.xlsx")
+month_dict = {"Jan":1,"Feb":2,"Mar":3,"Apr":4,"May":5,"Jun":6,"Jul":7,"Aug":8,"Sep":9,"Oct":10,"Nov":11,"Dec":12}
+month_num = int(month_dict[month])
+forecast = pd.read_excel(f"data/Forecast from Client_{month}.xlsx",engine='openpyxl')
 forecast.drop(columns=['(Do Not Modify) FCClient','(Do Not Modify) Row Checksum','(Do Not Modify) Modified On',
 'FCID','(Do Not Modify) Modified On','(Do Not Modify) FCClient','(Do Not Modify) Row Checksum','BP Code'],inplace=True)
 forecast.rename(columns={"Customer Short Name (BP Code) (Customer Master)":"Customer"},inplace=True)
 forecast['Target Month'] = pd.to_datetime(forecast['Target Month'], format='%Y-%m')
 forecast["Customer_FG"] = (forecast['Customer'].astype(object)+"-"+forecast['FG Code'].astype(object))
 
-# Assume that current month = 1, fc1==2, fc2==3, fc3==4, 
-forecast_fc1 = forecast[forecast['Forecast date'].dt.month == 2]
+forecast_fc1 = forecast[forecast['Forecast date'].dt.month == month_num+1]
 latest_indices_fc1 = forecast_fc1.groupby('Customer_FG')['Target Month'].idxmax()
 latest_records_fc1 = forecast_fc1.loc[latest_indices_fc1,['Customer_FG','Forecast Qty']]
 latest_records_fc1.rename(columns={'Forecast Qty':"fc1"},inplace=True)
 
-forecast_fc2 = forecast[forecast['Forecast date'].dt.month == 3]
+forecast_fc2 = forecast[forecast['Forecast date'].dt.month == month_num+2]
 latest_indices_fc2 = forecast_fc2.groupby('Customer_FG')['Target Month'].idxmax()
 latest_records_fc2 = forecast_fc2.loc[latest_indices_fc2,['Customer_FG','Forecast Qty']]
 latest_records_fc2.rename(columns={'Forecast Qty':"fc2"},inplace=True)
 
-forecast_fc3 = forecast[forecast['Forecast date'].dt.month == 4]
+forecast_fc3 = forecast[forecast['Forecast date'].dt.month == month_num+3]
 latest_indices_fc3 = forecast_fc3.groupby('Customer_FG')['Target Month'].idxmax()
 latest_records_fc3 = forecast_fc3.loc[latest_indices_fc3,['Customer_FG','Forecast Qty','Maker','Spec','Thickness','Width','Length']]
 latest_records_fc3.rename(columns={'Forecast Qty':"fc3"},inplace=True)
@@ -165,7 +169,7 @@ merged_po_forecast = merged_po_forecast[finish_order]
 merged_po_forecast.to_excel(f'data/finish_uat_{uat}.xlsx',index=False)
 
 # MOTHER COIL - filter status + overlap MC code
-mother_coil = pd.read_excel(f"data/MC Inventories_{month}.xlsx")
+mother_coil = pd.read_excel(f"data/MC Inventories_{month}.xlsx",engine='openpyxl')
 mother_coil.drop(columns=['(Do Not Modify) MC_Inventory','(Do Not Modify) Row Checksum','(Do Not Modify) Modified On',
 '(Do Not Modify) Modified On','Inspection No','Grade','HTV Comment','Prod. Date','Customer Short Name (BP Code) (Customer Master)','Ngày tạo'],inplace=True)
 mother_coil.rename(columns={
