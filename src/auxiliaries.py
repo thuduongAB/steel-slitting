@@ -57,7 +57,7 @@ def filter_stocks_by_group_standard(finish, stocks):
     first_item = list(finish.items())[0]
     customer_gr = first_item[1]['cut_standard']
     print(f"customer std {customer_gr}")
-    if customer_gr == "medium":
+    if "medium" in customer_gr :
         # Filter out stock < min MC weight
         mc_weights = [round(v['Min_MC_weight']) if v is not None and not math.isnan(v['Min_MC_weight']) else 0 for _, v in finish.items()]
         # Convert to a NumPy array and filter out NaNs
@@ -72,7 +72,7 @@ def filter_stocks_by_group_standard(finish, stocks):
                 min_mc_weight = 5000
             else: pass
         filtered_stocks = {k: v for k, v in stocks.items() if v['weight_1219'] >= min_mc_weight}
-    elif customer_gr == "big" and len(list(finish.items())) >2:
+    elif "big" in customer_gr and len(list(finish.items())) >2:
         # Filter out stock < 7000
         filtered = {k: v for k, v in stocks.items() if v['weight_1219'] >= max_coil_weight}
         if len(filtered) == 0:
@@ -104,16 +104,24 @@ def partite_stock(stocks, allowed_cut_weight, group, medium_mc_weight):
         else: pass
         # Sort weight ascending and receiving_date ascending
         filtered_stocks = dict(sorted(filtered_stocks.items(), key=lambda x: (datetime.fromisoformat(x[1]['receiving_date']).timestamp(),x[1]['weight'])))
-    elif ("medium" in group) and (medium_mc_weight*2 > max_mc_wg):
-        # Sort weight ascending and receiving_date ascending
-        filtered_stocks = dict(sorted(stocks.items(), key=lambda x: (datetime.fromisoformat(x[1]['receiving_date']).timestamp(),x[1]['weight'])))
-    elif ("medium" in group) and (medium_mc_weight*2 <= max_mc_wg):
-        # Sort weight descending and receiving_date ascending
-        filtered_stocks = dict(sorted(stocks.items(), key=lambda x: (-datetime.fromisoformat(x[1]['receiving_date']).timestamp(),x[1]['weight']), reverse= True))
-    else: 
-        # Sort weight descending and receiving_date ascending
-        filtered_stocks = dict(sorted(stocks.items(), key=lambda x: (-datetime.fromisoformat(x[1]['receiving_date']).timestamp(),x[1]['weight']), reverse= True))
-    
+    else:
+        stocks_di = {k: v for k, v in stocks.items() if "-Di" in k}
+        stocks_other_keys = {k: v for k, v in stocks.items() if "-Di" not in k}
+
+        # Sort weight
+        if ("medium" in group) and (medium_mc_weight*2 > max_mc_wg):
+            # Sort weight ascending and receiving_date ascending
+            filtered_stocks_other_keys = dict(sorted(stocks_other_keys.items(), key=lambda x: (datetime.fromisoformat(x[1]['receiving_date']).timestamp(),x[1]['weight'])))
+        elif ("medium" in group) and (medium_mc_weight*2 <= max_mc_wg):
+            # Sort weight descending and receiving_date ascending
+            filtered_stocks_other_keys = dict(sorted(stocks_other_keys.items(), key=lambda x: (-datetime.fromisoformat(x[1]['receiving_date']).timestamp(),x[1]['weight']), reverse= True))
+        else: 
+            # Sort weight descending and receiving_date ascending
+            filtered_stocks_other_keys = dict(sorted(stocks_other_keys.items(), key=lambda x: (-datetime.fromisoformat(x[1]['receiving_date']).timestamp(),x[1]['weight']), reverse= True))
+
+        # Combine the dictionaries, prioritizing "-Di" keys
+        filtered_stocks = {**stocks_di, **filtered_stocks_other_keys}
+        
     sub_stocks = {}
     accumulated_weight = 0
     
@@ -207,14 +215,17 @@ def refresh_stocks(taken_stocks, taken_stocks_dict, stocks):
         # UPDATE stocks
         div_stock_list = list(set(taken_div_og))
         for stock_key in div_stock_list:
+            taken_wg=0
+            original_wg=stocks[stock_key]['weight']
             for i in range(3):
                 try:
-                    wg = taken_stocks_dict[f'{stock_key}-Di{i+1}']
-                    stocks[f'{stock_key}-Di{i+1}'] = stocks[stock_key]
-                    stocks[f'{stock_key}-Di{i+1}'].update({'weight': wg})
-                    stocks[f'{stock_key}-Di{i+1}'].update({'status':"R:REWIND"})
+                    taken_wg += taken_stocks_dict[f'{stock_key}-Di{i+1}']
                 except KeyError: # already update in someround - the stock ID is the remained
                     pass
+            if original_wg - taken_wg > 0:
+                stocks[f'{stock_key}-Re'] = stocks[stock_key]
+                stocks[f'{stock_key}-Re'].update({'weight': original_wg-taken_wg})
+                stocks[f'{stock_key}-Re'].update({'status':"R:REWIND"})
         
         meg_stock_list = list(set(taken_merge_og))
         for stock_key in meg_stock_list:
@@ -302,9 +313,9 @@ def check_subgroup_fg(df, sum_need_cut, standard):
     
     return appended_df, std_dict
 
-def dividing_to_subgroup(coilcenter_finish_df,standard_group,MATERIALPROPS):
+def split_to_subgroup(coilcenter_finish_df,standard_group, MATERIALPROPS):
     # OVERLOAD-CHECK
-    total_need_cut = coilcenter_finish_df[coilcenter_finish_df['need_cut'] < 0]['need_cut'].sum()
+    total_need_cut = -coilcenter_finish_df[coilcenter_finish_df['need_cut'] < 0]['need_cut'].sum()
     coilcenter_subgroup_df, std_dict = check_subgroup_fg(coilcenter_finish_df, total_need_cut, standard_group)
     defined_standard = coilcenter_subgroup_df['cut_standard'].unique().tolist()
     
