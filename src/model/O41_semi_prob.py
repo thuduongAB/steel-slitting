@@ -100,8 +100,8 @@ class SemiProb():
   def cut_n_create_new_stock_set(self):
     self._cut_patterns()
     self._semi_cut_ratio() # cut_dict cho loai Z: SEMI
-    if (self.stock[self.skey]['status'] == "M:RAW MATERIAL" or self.stock[self.skey]['status'] == "R:REWIND") and self._check_remain_width():
-      cut_line = min(self.num_cuts_by_weight, self.num_cuts_by_width)
+    cut_line = min(self.num_cuts_by_weight, self.num_cuts_by_width)
+    if (self.stock[self.skey]['status'] == "M:RAW MATERIAL" or self.stock[self.skey]['status'] == "R:REWIND") and self._check_remain_width() and cut_line >0:
       self.cuts_dict = {str(self.fkey): cut_line}
       self.cut_weight = cut_line * self.finish[self.fkey]['width'] * self.stock[self.skey]['weight'] /self.stock[self.skey]['width']
       self.over_cut = {str(self.fkey): round(self.cut_weight - self.finish[self.fkey]['need_cut'],3)}
@@ -111,12 +111,11 @@ class SemiProb():
                                                 "warehouse": self.stock[self.skey]['warehouse'],
                                                 'status': "Z:SEMI FINISHED",
                                                 "remarks":""}}
-    
-      print(f"taken semi stock :{self.taken_stocks}") 
       
       self.remained_stocks = {f'{self.skey}-Se2':{"receiving_date": self.stock[self.skey]['receiving_date'],
                                                   "width": self.remain_width,
                                                   "weight": self.remain_width/self.stock[self.skey]['width']*self.stock[self.skey]['weight'],
+                                                  "weight_1219": 1219/self.stock[self.skey]['width']*self.stock[self.skey]['weight'],
                                                   "warehouse": self.stock[self.skey]['warehouse'],
                                                   'status': "Z:SEMI MCOIL",
                                                   "remarks":f"remained_cut: {self.fkey}:{self.remained_cuts}"}}

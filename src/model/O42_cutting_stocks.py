@@ -106,7 +106,7 @@ class CuttingStocks:
             filtered_min_stocks = {k: v for k, v in self.S.stocks.items() if (v['width'] == s_width and v['weight'] >= min_w)}
             self.filtered_stocks.update(filtered_min_stocks)
     
-    def filter_stocks_by_group_standard(self):
+    def filter_stocks(self):
         # Find coil-standard group
         first_item = list(self.F.finish.items())[0]
         customer_gr = first_item[1]['cut_standard']

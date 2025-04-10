@@ -49,7 +49,7 @@ class DualProblem:
                     trim_loss_pct = round(trim_loss/self.dual_stocks[s]['width'] * 100, 3)
                     self.patterns.append(
                         {"stock":s,
-                         "inventory_id": re.sub(r"-Di\d+", "", s),
+                         "inventory_id": re.sub(r"-Di\d+|-Re", "", s),
                         'trim_loss':trim_loss, 
                         "trim_loss_pct": trim_loss_pct ,
                         "explanation":"",'remark':"","cutting_date":"",
@@ -175,7 +175,7 @@ class DualProblem:
         try:
             s = max(marginal_values, key=marginal_values.get) # pick the first stock if having same width
             cuts_dict =pattern[s]
-            new_pattern = {"stock":s, "inventory_id": re.sub(r"-Di\d+", "", s),
+            new_pattern = {"stock":s, "inventory_id": re.sub(r"-Di\d+|-Re", "", s),
                            'stock_weight': self.dual_stocks[s]['weight'], 
                            'stock_width': self.dual_stocks[s]["width"],
                            "cuts": cuts_dict,
@@ -265,7 +265,7 @@ class DualProblem:
                 status_order.get(x['coil_status'], float('inf'))  # Default to 'inf' for unknown statuses
             )
         ))
-        print(self.filtered_patterns)
+        # print(self.filtered_patterns)
 
         # Initiate dict
         self.chosen_stocks = {}
