@@ -26,7 +26,8 @@ global stop_stock_ratio, stop_needcut_wg
 global overloaded_total_need_cut, overloaded_total_fg_codes, max_coil_weight
 
 ### --- PARAMETER SETTING ---
-uat = int(os.getenv('UAT', '0000'))
+# uat = int(os.getenv('UAT', '0000'))
+uat = int(1141)
 mc_ratio = float(os.getenv('MC_RATIO', '2.5'))
 added_stock_ratio = int(os.getenv('ADDED_STOCK_RATIO', '10'))/100
 
@@ -68,7 +69,7 @@ def onestock_cut(logger, finish, stocks, MATERIALPROPS, margin_df):
     oneSteel.set_prob()
     stt, final_solution_patterns, over_cut = oneSteel.solve_prob("flow")
 
-    if stt == "Solved":
+    if stt == "Solved" and final_solution_patterns[0]['trim_loss_pct']< 4.00:
         stock_key = final_solution_patterns[0]['stock']
         taken_stocks.append(stock_key)
         taken_stocks_dict = {stock_key: stocks[stock_key]['weight']}
@@ -82,7 +83,7 @@ def onestock_cut(logger, finish, stocks, MATERIALPROPS, margin_df):
         logger.info(f">>> with trim loss pct {final_solution_patterns[0]['trim_loss_pct']} as {final_solution_patterns[0]['trim_loss']} mm")
         return final_solution_patterns, over_cut, taken_stocks, taken_stocks_dict
     else:
-        return final_solution_patterns, over_cut, taken_stocks , {} #over-cut aam
+        return [], {k: v['need_cut'] for k, v in finish.items()}, [] , {} #over-cut aam
 
 def multistocks_cut(retry_inner_count, logger, finish, stocks, MATERIALPROPS, margin_df, prob_type):
     """
@@ -92,7 +93,7 @@ def multistocks_cut(retry_inner_count, logger, finish, stocks, MATERIALPROPS, ma
     # SET UP
     steel = CuttingStocks(finish, stocks, MATERIALPROPS)
     steel.update(bound = starting_bound, margin_df = margin_df)
-    steel.filter_stocks_by_group_standard()
+    steel.filter_stocks()
     steel.check_division_stocks()
     sorted_keys = sorted([k for k in steel.filtered_stocks.keys()])
     steel.filtered_stocks = copy.deepcopy({k: steel.filtered_stocks[k] for k in sorted_keys})
@@ -202,6 +203,9 @@ def multistocks_cut(retry_inner_count, logger, finish, stocks, MATERIALPROPS, ma
 class ContinueSubFinish(Exception):
     pass  
 
+class OutOfInnerStocks(Exception):
+    pass
+
 class OutOfStocks(Exception):
     pass
 
@@ -263,9 +267,9 @@ for i in range(n_jobs):
     logger.info("------------------------------------------------")
     logger.info(f'*** START processing JOB {i} MATERIALPROPS:{batch} ***')
 
-    ## Loop FINISH - each TASK (by CUSTOMER) in JOB - P1.0
+    ## Loop FINISH - each TASK (by STANDARD) - LAYER 1
     moved_standard_finish = dict()
-    for finish_item in finish_list['materialprop_finish'][materialprop_set]['group']:# STANDARD GROUP - LAYER 1
+    for finish_item in finish_list['materialprop_finish'][materialprop_set]['group']:
         try:
             # SETUP
             over_cut = dict()
@@ -273,7 +277,7 @@ for i in range(n_jobs):
             
             ## GET STANDARD-NAME 
             standard_group = list(finish_item.keys())[0]
-            logger.info(f"### STANDARD: {standard_group}")
+            logger.info(f"#### STANDARD: {standard_group} ####")
             
             # Get BEGINNING FINISH -COIL CENTER list
             all_finish = finish_item[standard_group]['FG_set']  # original finish with stock ratio < 0.1 (need cut can be positive)
@@ -282,7 +286,7 @@ for i in range(n_jobs):
                 logger.info(f">>> Merge un-cut {len(moved_standard_finish)} FG into medium group")
 
             avalaible_coil_center = [k for k, _ in available_stock_qty.items()]
-            logger.info(f"### COIL CENTER HAVING STOCK TO CHOOSE: {avalaible_coil_center}")
+            logger.info(f"COIL CENTER HAVING STOCK TO CHOOSE: {avalaible_coil_center}")
             
             if added_stock_ratio <= stop_stock_ratio:
                 filtered_finish = {k: v for k, v in all_finish.items() if v['need_cut']/(v['average FC']+1) < stop_stock_ratio}
@@ -305,388 +309,432 @@ for i in range(n_jobs):
                 finish_df.rename(columns={'index': 'order_id'}, inplace=True)
                 unique_cc_1st = finish_df['1st Priority'].unique()
                 avalaible_coil_center = compare_and_add_coilcenter(avalaible_coil_center, unique_cc_1st)
+                logger.info(f"Coil center 1st with need cut {unique_cc_1st}")
+
                 # LOOP TO START COIL CENTER PRIORITY - LAYER 2
                 j = 0
                 outer_coil_center_priority_cond = True
                 while j <= len(avalaible_coil_center)-1 and outer_coil_center_priority_cond: #NO.2
                     coil_center = avalaible_coil_center[j] # Di tu coil center co it coil nhat
-                    logger.info(f"<<< START IN {coil_center} >>>")
+                    logger.info(f"### START IN {coil_center} ###")
                     
                     # Filter rows where '1st_priority' contains [coil_center]
                     coilcenter_finish_df = finish_df[finish_df['1st Priority'] == coil_center]
                     neg_need_cut_df = coilcenter_finish_df[coilcenter_finish_df['need_cut']< 0]
                     sum_need_cut = sum(neg_need_cut_df['need_cut'])
-                    
-                    if coilcenter_finish_df.shape[0] > 0 and sum_need_cut < 0: 
-                        coilcenter_finish_df_sorted = coilcenter_finish_df.loc[coilcenter_finish_df['coil_center_priority'].apply(len).sort_values(ascending=False).index]
-                        priority_columns = ['1st Priority', '2nd Priority', '3rd Priority']
-                        coilcenter_finish_df_sorted[priority_columns] = coilcenter_finish_df_sorted[priority_columns].astype('object')
-                        
-                        inner_coil_center_order = coilcenter_finish_df_sorted[['1st Priority','2nd Priority','3rd Priority']].iloc[0].astype(str).tolist()
-                        logger.info(f"Inner coil center order {inner_coil_center_order}")
-                        
-                        icc = 0
-                        inner_coil_center_priority_cond = True
-                        retry_inner_count = 0
-                        add_new_fg_in_new_coil_center = pd.DataFrame(columns=coilcenter_finish_df.columns)
-                        while icc <= len(inner_coil_center_order)-1 and inner_coil_center_priority_cond: #NO.3
-                            logger.info(f"Round {retry_inner_count}")
-                            # CHECK STOCK
-                            filtered_stocks_by_wh = copy.deepcopy(filter_stocks_by_wh(stocks_by_standard, coil_center))
-                            # Try add new FG in new coil center
-                            coilcenter_finish_df = pd.concat([coilcenter_finish_df, add_new_fg_in_new_coil_center], ignore_index=True)
-                            # OVERLOAD-CHECK
-                            sub_finish_list = dividing_to_subgroup(coilcenter_finish_df, standard_group, MATERIALPROPS)
-                            moved_subfinish = {}
-                            for subfinish_item in sub_finish_list['subgroup']:
-                                group_name = list(subfinish_item.keys())[0] 
-                                logger.info(f" SUB_GROUP {group_name}")                
-                                # Get SUBFINISH list
-                                subfinish = subfinish_item[group_name]
-                                subfinish.update(moved_subfinish)
-                                
-                                try: # GO TO NEXT WH IF STOCK EMPTY WHEN START-CUTTING NEW SUBGROUP 
+                    try:
+                        if coilcenter_finish_df.shape[0] > 0 and sum_need_cut < 0: 
+                            coilcenter_finish_df_sorted = coilcenter_finish_df.loc[coilcenter_finish_df['coil_center_priority'].apply(len).sort_values(ascending=False).index]
+                            priority_columns = ['1st Priority', '2nd Priority', '3rd Priority']
+                            coilcenter_finish_df_sorted[priority_columns] = coilcenter_finish_df_sorted[priority_columns].astype('object')
+                            
+                            inner_coil_center_order = coilcenter_finish_df_sorted[['1st Priority','2nd Priority','3rd Priority']].iloc[0].astype(str).tolist()
+                            
+                            icc = 0
+                            inner_coil_center_priority_cond = True
+                            retry_inner_count = 0
+                            add_new_fg_in_new_coil_center_df = pd.DataFrame(columns=coilcenter_finish_df.columns)
+                            while icc <= len(inner_coil_center_order)-1 and inner_coil_center_priority_cond: #NO.3
+                                logger.info(f"LOOP Inner coil center order {inner_coil_center_order}")
+                                logger.info(f"Round {retry_inner_count}")
+                                # CHECK STOCK
+                                filtered_stocks_by_wh = copy.deepcopy(filter_stocks_by_wh(stocks_by_standard, coil_center))
+                                # Try add new FG in new coil center
+                                coilcenter_finish_df = pd.concat([coilcenter_finish_df, add_new_fg_in_new_coil_center_df], ignore_index=True)
+                                # OVERLOAD-CHECK
+                                sub_finish_list = split_to_subgroup(coilcenter_finish_df, standard_group, MATERIALPROPS)
+                                moved_subfinish = {}
+                                len_sub_finish_list = len(sub_finish_list['subgroup'])
+                                logger.warning(f"Split into {len_sub_finish_list} group")
+                                index = 0
+                                while index < len_sub_finish_list:
+                                    subfinish_item = sub_finish_list['subgroup'][index]
+                                    group_name = list(subfinish_item.keys())[0] 
+                                    logger.info(f"> SUB_GROUP {group_name}")                
+                                    # Get SUBFINISH list
+                                    subfinish = subfinish_item[group_name]
+                                    subfinish.update(moved_subfinish)
+                                    
+                                    # GO TO NEXT WH IF STOCK EMPTY WHEN START-CUTTING NEW SUBGROUP 
                                     # + ADDED NEW FG IN NEW HOUSE (AS 1ST PRIORITY)
                                     if len(filtered_stocks_by_wh) == 0:
-                                        logger.warning(f'Out of stock for {coil_center}, find more stock in priority order {inner_coil_center_order}')
-                                        while icc < len(inner_coil_center_order) - 1:
+                                        logger.warning(f'! Out of stock for {coil_center}, find more stocks in priority order {inner_coil_center_order}')
+                                        while icc < len(inner_coil_center_order):
                                             icc += 1
-                                            coil_center = inner_coil_center_order[icc]
-                                            stocks_by_next_wh = filter_stocks_by_wh(stocks_by_standard, coil_center)
+                                            next_coil_center = inner_coil_center_order[icc]
+                                            stocks_by_next_wh = filter_stocks_by_wh(stocks_by_standard, next_coil_center)
                                             if len(stocks_by_next_wh) > 0:
-                                                logger.info(f">>> FOUND STOCKS IN {coil_center}, REDIRECT TO {coil_center}")
-                                                avalaible_coil_center = avalaible_coil_center[avalaible_coil_center != coil_center]
+                                                logger.info(f"! STOCKS FOUND , REDIRECT TO {next_coil_center}")
+                                                coil_center = next_coil_center
+                                                avalaible_coil_center.remove(next_coil_center)
                                                 filtered_stocks_by_wh = copy.deepcopy(stocks_by_next_wh)
-                                                added_finish_df = finish_df[finish_df['1st Priority']== coil_center]
+                                                next_coilcenter_finish_df = finish_df[finish_df['1st Priority'] == next_coil_center]
                                                 
-                                                if added_finish_df.shape[0]> 0:
-                                                    added_finish_df_sorted = added_finish_df.loc[added_finish_df['coil_center_priority'].apply(len).sort_values(ascending=False).index]
+                                                if next_coilcenter_finish_df.shape[0]> 0:
+                                                    #replace inner_coil_center_order
+                                                    next_coilcenter_finish_df_sorted = next_coilcenter_finish_df.loc[next_coilcenter_finish_df['coil_center_priority'].apply(len).sort_values(ascending=False).index]
+                                                    inner_coil_center_order = next_coilcenter_finish_df_sorted[['1st Priority','2nd Priority','3rd Priority']].iloc[0].astype(str).tolist()
+                                                    remaining_subfinish = copy.deepcopy(subfinish)
+                                                    for idx in range(index+1, len_sub_finish_list):
+                                                        subfinish_item = sub_finish_list['subgroup'][idx]
+                                                        group_name = list(subfinish_item.keys())[0]               
+                                                        # Get SUBFINISH list
+                                                        subfinish = subfinish_item[group_name]
+                                                        remaining_subfinish.update(subfinish)
 
-                                                    inner_coil_center_order = added_finish_df_sorted[['1st Priority','2nd Priority','3rd Priority']].iloc[0].astype(str).tolist()
-                                                    inner_subfinish= pd.DataFrame.from_dict(subfinish, orient='index').reset_index()
-                                                    inner_subfinish.rename(columns={'index': 'order_id'}, inplace=True)
+                                                    inner_subfinish_df= pd.DataFrame.from_dict(remaining_subfinish, orient='index').reset_index()
+                                                    inner_subfinish_df.rename(columns={'index': 'order_id'}, inplace=True)
 
-                                                    new_coilcenter_finish_df = pd.concat([inner_subfinish, added_finish_df], axis=0, ignore_index=True)
-                                                else: 
-                                                    new_coilcenter_finish_df = pd.DataFrame.from_dict(subfinish, orient='index').reset_index()
+                                                    inner_subfinish_df = inner_subfinish_df[(inner_subfinish_df['2nd Priority']==next_coil_center)|(inner_subfinish_df['3rd Priority']==next_coil_center)]
+                                                    new_coilcenter_finish_df = pd.concat([inner_subfinish_df, next_coilcenter_finish_df], axis=0, ignore_index=True)
+                                                else:
+                                                    remaining_subfinish = copy.deepcopy(subfinish)
+                                                    for idx in range(index+1, len_sub_finish_list):
+                                                        subfinish_item = sub_finish_list['subgroup'][idx]
+                                                        group_name = list(subfinish_item.keys())[0]                
+                                                        # Get SUBFINISH list
+                                                        subfinish = subfinish_item[group_name]
+                                                        remaining_subfinish.update(subfinish)
+
+                                                    new_coilcenter_finish_df = pd.DataFrame.from_dict(remaining_subfinish, orient='index').reset_index()
                                                     new_coilcenter_finish_df.rename(columns={'index': 'order_id'}, inplace=True)
-
-                                                # OVERLOAD-CHECK
-                                                sub_finish_list = dividing_to_subgroup(new_coilcenter_finish_df, standard_group, MATERIALPROPS)
                                                 
-                                                for subfinish_item in sub_finish_list['subgroup']: 
-                                                    group_name = list(subfinish_item.keys())[0]
-                                                    logger.info(f" SUB_GROUP {group_name}")
-                                                    
-                                                    # Get SUBFINISH list
-                                                    subfinish = subfinish_item[group_name]
-                                                    raise ContinueSubFinish
+                                                # OVERLOAD-CHECK
+                                                sub_finish_list = split_to_subgroup(new_coilcenter_finish_df, standard_group, MATERIALPROPS)
+                                                len_sub_finish_list = len(sub_finish_list['subgroup'])
+                                                logger.warning(f"Split into {len_sub_finish_list} group")
+                                                index = 0
+                                                subfinish_item = sub_finish_list['subgroup'][index]
+                                                group_name = list(subfinish_item.keys())[0] 
+                                                logger.info(f">>SUB_GROUP {group_name}")
+                                                break
                                             else:
-                                                logger.warning(f'>>>> Out of stocks for WH {coil_center} as {icc+1} priority')
+                                                logger.warning(f'>>>> Out of stocks for WH {inner_coil_center_order[icc]} as {icc+1} priority')
                                                 if icc+1 == 3:
-                                                    raise OutOfStocks
+                                                    raise OutOfInnerStocks
                                                 else: pass
                                     else: pass
-                                except ContinueSubFinish: pass
-                                
-                                medium_mc_weight = np.percentile(sorted([v['Min_MC_weight'] for _, v in subfinish.items()]),50)
-                                partial_f_list = {k for k in subfinish.keys()} 
-                                total_need_cut_by_cust_gr = -sum(item["need_cut"] for item in subfinish.values() if item["need_cut"] < 0)
-                                logger.info(f"> Finished Goods key {partial_f_list}")
-                                logger.info(f"> Total Need Cut: {total_need_cut_by_cust_gr}")
-
-                                # SELECT STOCKS by need cut
-                                if len(subfinish) <= 2 and total_need_cut_by_cust_gr < 4000 :
-                                    filtered_st = dict(sorted(filtered_stocks_by_wh.items(), key=lambda x: (x[1]['weight'])))
-                                    try:
-                                        selected_stock = next((key, value) for key, value in filtered_st.items() if value["weight"] >= total_need_cut_by_cust_gr * 1.3)
-                                        partial_stocks = copy.deepcopy({selected_stock[0]: selected_stock[1]})
-                                    except StopIteration:
-                                        partial_stocks = dict(sorted(filtered_stocks_by_wh.items(), key=lambda x: (x[1]['weight'])))
-                                else: partial_stocks = partite_stock(filtered_stocks_by_wh, total_need_cut_by_cust_gr * mc_ratio, group_name, medium_mc_weight)
-
-                                # Check unqualified stocks:
-                                unqualified_stocks = {key: filtered_stocks_by_wh[key] for key in filtered_stocks_by_wh if key not in partial_stocks}
-                                
-                                # CHECK partial stock
-                                if len(partial_stocks.keys()) > 0:
-                                    st = {k for k in partial_stocks.keys()}
-                                    logger.info(f"> Number of stocks in {coil_center} : {st}")
-                                    # ********** NOW CUT WITH SELECTED FG AND STOCK  ***************
-                                    logger.info(f">> CUT for: {len(subfinish.keys())} FINISH  w {len(partial_stocks.keys())} MCs")
-                                    args_dict = {
-                                                'logger': logger,
-                                                'finish': subfinish,
-                                                'stocks': partial_stocks,
-                                                'MATERIALPROPS': MATERIALPROPS,
-                                                'margin_df': margin_df,
-                                                }
                                     
-                                    # FIND STARTING BOUND
-                                    starting_bound = find_starting_bound(subfinish, partial_stocks)
-                                    logger.info(f"Starting bound: {starting_bound}")
+                                    medium_mc_weight = np.percentile(sorted([v['Min_MC_weight'] for _, v in subfinish.items()]),50)
+                                    partial_f_list = {k for k in subfinish.keys()} 
+                                    total_need_cut_by_cust_gr = -sum(item["need_cut"] for item in subfinish.values() if item["need_cut"] < 0)
+                                    logger.info(f"> Finished Goods key {partial_f_list}")
+                                    logger.info(f"> Total Need Cut: {total_need_cut_by_cust_gr}")
 
-                                    try: # START OPTIMIZATION
-                                        start_time = time.time()
+                                    # SELECT STOCKS by need cut
+                                    if len(subfinish) <= 2 and total_need_cut_by_cust_gr < 4000 :
+                                        filtered_st = dict(sorted(filtered_stocks_by_wh.items(), key=lambda x: (x[1]['weight'])))
+                                        try:
+                                            selected_stock = next((key, value) for key, value in filtered_st.items() if value["weight"] >= total_need_cut_by_cust_gr * 1.3)
+                                            partial_stocks = copy.deepcopy({selected_stock[0]: selected_stock[1]})
+                                        except StopIteration:
+                                            partial_stocks = dict(sorted(filtered_stocks_by_wh.items(), key=lambda x: (x[1]['weight'])))
+                                    else: partial_stocks = partite_stock(filtered_stocks_by_wh, total_need_cut_by_cust_gr * mc_ratio, group_name, medium_mc_weight)
+
+                                    # Check unqualified stocks:
+                                    unqualified_stocks = {key: filtered_stocks_by_wh[key] for key in filtered_stocks_by_wh if key not in partial_stocks}
+                                    
+                                    # CHECK partial stock
+                                    if len(partial_stocks.keys()) > 0:
+                                        st = {k for k in partial_stocks.keys()}
+                                        logger.info(f">> Number of stocks in {coil_center} : {st}")
+                                        # ********** NOW CUT WITH SELECTED FG AND STOCK  ***************
+                                        logger.info(f">> Cut for: {len(subfinish.keys())} FINISH  w {len(partial_stocks.keys())} MCs")
+                                        args_dict = {
+                                                    'logger': logger,
+                                                    'finish': subfinish,
+                                                    'stocks': partial_stocks,
+                                                    'MATERIALPROPS': MATERIALPROPS,
+                                                    'margin_df': margin_df,
+                                                    }
                                         
-                                        if len(partial_stocks) == 1 and standard_group == 'big':
-                                            logger.info("*** NORMAL ONE STOCK Case ***")
-                                            final_solution_patterns, over_cut, taken_stocks, taken_stocks_dict = onestock_cut(**args_dict)
+                                        # FIND STARTING BOUND
+                                        starting_bound = find_starting_bound(subfinish, partial_stocks)
+                                        logger.info(f"Starting bound: {starting_bound}")
+
+                                        try: # START OPTIMIZATION
+                                            start_time = time.time()
                                             
-                                        else:
-                                            logger.info("*** NORMAL DUAL MULTI Case ***")
-                                            final_solution_patterns, over_cut, taken_stocks, taken_stocks_dict = multistocks_cut(retry_inner_count,**args_dict, prob_type ="Dual")
-
-                                        ### Exclude taken_stocks out of stock_to_use only for dividing MC
-                                        stocks_to_use = refresh_stocks(taken_stocks, taken_stocks_dict, stocks_to_use)
-                                        stocks_by_standard = refresh_stocks(taken_stocks, taken_stocks_dict, stocks_by_standard)
-                                        filtered_stocks_by_wh = refresh_stocks(taken_stocks, taken_stocks_dict, filtered_stocks_by_wh)
-
-                                    except NoDualSolution: 
-                                        neg_subfinish = {k: v for k, v in finish.items() if v['need_cut'] < 0}
-                                        logger.info(f"---- TRY CUT REWIND OR SEMI for {len(neg_subfinish.keys())} FG and {len(partial_stocks.keys())} ----")
-                                        if len(partial_stocks.keys()) == 1 and len(neg_subfinish.keys()) == 1:
-                                            logger.info('*** SEMI CASE *** 1 FG vs 1 Stock')
-                                            steel = SemiProb(partial_stocks, subfinish, MATERIALPROPS)
-                                            steel.update(margin_df)
-                                            steel.cut_n_create_new_stock_set()
-                                            
-                                            ## Update lai stock by wh
-                                            filtered_stocks_by_wh.pop(list(partial_stocks.keys())[0])   # truong hop ko cat duoc 
-                                            filtered_stocks_by_wh.update(steel.remained_stocks)         # thi 2 dong nay bu tru nhau
-                                            
-                                            stocks_by_standard.pop(list(partial_stocks.keys())[0])
-                                            stocks_by_standard.update(steel.remained_stocks)
-
-                                            stocks_to_use.pop(list(partial_stocks.keys())[0])
-                                            stocks_to_use.update(steel.remained_stocks)
-                                            try:
-                                                taken_stock_key = list(steel.taken_stocks.keys())[0]
-                                                trim_loss_semi_pct=(steel.og_stock_width - sum([finish[f]["width"] * steel.cuts_dict[f] for f in steel.cuts_dict.keys()]))/steel.og_stock_width
-                                                if trim_loss_semi_pct > 0.04:
-                                                    explain = "keep Semi"
-                                                else: explain = ""
-                                                weight_dict = {f: round(steel.cuts_dict[f] * finish[f]['width'] * steel.taken_stocks[taken_stock_key]['weight']/steel.taken_stocks[taken_stock_key]['width'],3) for f in steel.cuts_dict.keys()}
-                                                over_cut = {k: float(v + finish[k]["need_cut"]) for k, v in weight_dict.items()} #need_cut am
-                                                logger.info(f"Semi Solution : {taken_stock_key}, {steel.cuts_dict} weight {weight_dict}, over_cut {over_cut}")
-                                                fk = list(steel.cuts_dict.keys())[0]
-                                                if subfinish[fk]['Max_weight'] !=0 and subfinish[fk]['Max_weight'] !="":
-                                                    div_ratio = round((subfinish[fk]['width'] * steel.taken_stocks[taken_stock_key]['weight'])/(steel.taken_stocks[taken_stock_key]['width']* subfinish[fk]['Max_weight']))
-                                                else:
-                                                    div_ratio=0
-                                                if div_ratio <= 1: 
-                                                    rmark_note = ""
-                                                else: 
-                                                    rmark_note = f"chat {div_ratio} phan"
-                                                semi_pattern = {"stock": taken_stock_key,
-                                                                            "inventory_id": re.sub(r"-Se\d+", "", taken_stock_key),
-                                                                            "stock_width":  steel.taken_stocks[taken_stock_key]['width'],
-                                                                            "stock_weight": steel.taken_stocks[taken_stock_key]['weight'],
-                                                                            "receiving_date":steel.taken_stocks[taken_stock_key]['receiving_date'],
-                                                                            "fg_code":{f: subfinish[f]['fg_codes'] for f in steel.cuts_dict.keys()},
-                                                                            "Customer": {f: subfinish[f]['customer_name'] for f in steel.cuts_dict.keys()},
-                                                                            'cuts': steel.cuts_dict,
-                                                                            "FG Weight": weight_dict,
-                                                                            "FG width": {f: subfinish[f]['width'] for f in steel.cuts_dict.keys()},
-                                                                            "standard": {f: subfinish[f]['standard'] for f in steel.cuts_dict.keys()},
-                                                                            "Min weight":{f: subfinish[f]['Min_weight'] for f in steel.cuts_dict.keys()},
-                                                                            "Max weight":{f: subfinish[f]['Max_weight'] for f in steel.cuts_dict.keys()},
-                                                                            'average_fc':{f: subfinish[f]['average FC'] for f in steel.cuts_dict.keys()},
-                                                                            '1st Priority':{f: subfinish[f]['1st Priority'] for f in steel.cuts_dict.keys()},
-                                                                            "explanation": explain,
-                                                                            "remarks": {f: rmark_note for f in steel.cuts_dict.keys()},
-                                                                            "cutting_date":"",
-                                                                            "trim_loss":"" , 
-                                                                            "trim_loss_pct": round(trim_loss_semi_pct*100,3)
-                                                                        }
-                                                final_solution_patterns.append(semi_pattern)
-                                                taken_stocks_dict = {p['stock']: p['stock_weight'] for p in final_solution_patterns}
-                                            except IndexError:
-                                                fk = list(subfinish.keys())[0]
-                                                sk = list(partial_stocks.keys())[0]
-                                                weight_oneline = round(subfinish[fk]['width'] * partial_stocks[sk]['weight']/partial_stocks[sk]['width'],3)
-                                                logger.warning(f"one line cut {weight_oneline}-kgs for MC {sk} weight {partial_stocks[sk]['weight']}")
-                                                final_solution_patterns = []
-
-                                        elif len(neg_subfinish.keys()) <= 3:
-                                            logger.info("*** REWIND Case ***")
-                                            # Find the stock item with the highest weight
-                                            highest_weight_item = max(partial_stocks.items(), key=lambda x: x[1]["weight"])
-                                            # Extracting the item key and details
-                                            item_key, item_details = highest_weight_item
-                                            rewind_stocks ={item_key: item_details}
-                                            rewind_args_dict = {
-                                                'logger': logger,
-                                                'finish': subfinish,
-                                                'stocks': rewind_stocks,
-                                                'MATERIALPROPS': MATERIALPROPS,
-                                                'margin_df': margin_df,
-                                                }
-                                            try:
-                                                final_solution_patterns, over_cut, taken_stocks, remained_stocks = multistocks_cut(retry_inner_count,**rewind_args_dict, prob_type="Rewind")
-                                                taken_stocks_dict = {p['stock']: p['stock_weight'] for p in final_solution_patterns}
-                                                logger.info(f"REMAINED stocks: {[remained_stocks.keys()]}")
-                                                filtered_stocks_by_wh.pop(list(partial_stocks.keys())[0]) # truong hop ko cat duoc 
-                                                filtered_stocks_by_wh.update(remained_stocks)     # thi 2 dong nay bu tru nhau
+                                            if len(partial_stocks) == 1 and standard_group == 'big':
+                                                logger.info("*** NORMAL ONE STOCK Case ***")
+                                                final_solution_patterns, over_cut, taken_stocks, taken_stocks_dict = onestock_cut(**args_dict)
                                                 
-                                                stocks_by_standard.pop(list(partial_stocks.keys())[0]) 
-                                                stocks_by_standard.update(remained_stocks)   
+                                            else:
+                                                logger.info("*** NORMAL DUAL MULTI Case ***")
+                                                final_solution_patterns, over_cut, taken_stocks, taken_stocks_dict = multistocks_cut(retry_inner_count,**args_dict, prob_type ="Dual")
 
-                                                stocks_to_use.pop(list(partial_stocks.keys())[0]) 
-                                                stocks_to_use.update(remained_stocks)    
-                                            except TypeError: pass 
-                                        else: pass
-                                else: logger.warning(f'>>>> Out of SUITABLE stocks for {group_name} in {coil_center}')
-                                
-                                # MOVE NOT-FULLY CUT FG IN THIS SUBGROUP TO NEXT SUBGROUP
-                                moved_subfinish = move_finish(subfinish, over_cut)
+                                            ### Exclude taken_stocks out of stock_to_use only for dividing MC
+                                            stocks_to_use = refresh_stocks(taken_stocks, taken_stocks_dict, stocks_to_use)
+                                            stocks_by_standard = refresh_stocks(taken_stocks, taken_stocks_dict, stocks_by_standard)
+                                            filtered_stocks_by_wh = refresh_stocks(taken_stocks, taken_stocks_dict, filtered_stocks_by_wh)
+                                            logger.info(f"Remaining stocks by warehouse: {filtered_stocks_by_wh.keys()}")
+                                            
+                                        except NoDualSolution: 
+                                            neg_subfinish = {k: v for k, v in subfinish.items() if v['need_cut'] < 0}
+                                            logger.info(f"---- TRY CUT REWIND OR SEMI for {len(neg_subfinish.keys())} FG and {len(partial_stocks.keys())} ----")
+                                            if len(partial_stocks.keys()) == 1 and len(neg_subfinish.keys()) == 1:
+                                                logger.info('*** SEMI CASE *** 1 FG vs 1 Stock')
+                                                steel = SemiProb(partial_stocks, neg_subfinish, MATERIALPROPS)
+                                                steel.update(margin_df)
+                                                steel.cut_n_create_new_stock_set()
+                                                
+                                                ## Update lai stock by wh
+                                                filtered_stocks_by_wh.pop(list(partial_stocks.keys())[0])   # truong hop ko cat duoc 
+                                                filtered_stocks_by_wh.update(steel.remained_stocks)         # thi 2 dong nay bu tru nhau
+                                                
+                                                stocks_by_standard.pop(list(partial_stocks.keys())[0])
+                                                stocks_by_standard.update(steel.remained_stocks)
 
-                                # COMPLETE CUTTING for sub-finish
-                                if not final_solution_patterns:
-                                    logger.warning(f"!!! NO solution/NO cutting at {coil_center}")
-                                    sum_need_cut = -sum([subfinish[f]['need_cut'] for f in subfinish.keys()])
-                                    no_solution = [{
-                                        "stock": coil_center,
-                                        "inventory_id": "",
-                                        "stock_width":  "",
-                                        "stock_weight": "",
-                                        "receiving_date":"",
-                                        "cutting_date":"",
-                                        "trim_loss":"" , 
-                                        "trim_loss_pct": "",
-                                        'cuts': {f: 0 for f in subfinish.keys()},
-                                        "fg_code":{f: subfinish[f]['fg_codes'] for f in subfinish.keys()},
-                                        "Customer":{f: subfinish[f]['customer_name'] for f in subfinish.keys()},
-                                        "FG Weight": {f: 0 for f in subfinish.keys()},
-                                        "FG width": {f: subfinish[f]['width'] for f in subfinish.keys()},
-                                        "standard": {f: subfinish[f]['standard'] for f in subfinish.keys()},
-                                        "Min weight":  {f: subfinish[f]['Min_weight'] for f in subfinish.keys()},
-                                        "Max weight":  {f: subfinish[f]['Max_weight'] for f in subfinish.keys()},
-                                        "average_fc": {f: subfinish[f]['average FC'] for f in subfinish.keys()},
-                                        '1st Priority':{f: subfinish[f]['1st Priority'] for f in subfinish.keys()},
-                                        "explanation": {f: "No optimal solution for trim loss <4%" if sum_need_cut > 200 else "Minor need-cut" for f in subfinish.keys()},
-                                        "remarks": {f: "" for f in subfinish.keys()}
-                                        }]
-                                    # --- SAVE DF to EXCEL ---
-                                    end_time = time.time()
-                                    cleaned_materialprop_set = clean_filename(materialprop_set)
-                                    filename = f"results/UATresult-{uat}-job{i}-{group_name}-nosolution.xlsx"
-                                    df = flattern_data(no_solution)
-                                    df = df[['stock', 'inventory_id', 'stock_weight', 'stock_width',  
-                                            'receiving_date','explanation', 'remarks', 'cutting_date',
-                                            'trim_loss', 'trim_loss_pct', 'fg_code', 'Customer', 'FG Weight',
-                                            'FG width', 'standard', 'Min weight', 'Max weight', 'average_fc',
-                                            '1st Priority', 'cuts', 'lines']]
-                                    df['time'] = end_time - start_time
-                                    if os.path.isfile(filename):
-                                        with pd.ExcelWriter(filename, engine='openpyxl', mode='a',if_sheet_exists='overlay') as writer:
-                                            df.to_excel(writer, sheet_name='Sheet1', index=False)
-                                    else: df.to_excel(filename, index=False)
-                                    logger.warning(f"MC CODE {materialprop_set} for {group_name} saved EXCEL file")
-                                else: 
-                                    # UPDATE USED STOCK AND REMAINING NEEDCUT
-                                    total_taken_stocks.append(taken_stocks)
-                                    stocks_by_standard = refresh_stocks(taken_stocks, taken_stocks_dict ,stocks_by_standard)
-                                    stocks_to_use = refresh_stocks(taken_stocks,taken_stocks_dict, stocks_to_use)
-                                    # --- SAVE DF to EXCEL ---
-                                    end_time = time.time()
-                                    cleaned_materialprop_set = clean_filename(materialprop_set)
-                                    filename = f"results/UATresult-{uat}-job{i}-{group_name}-{coil_center}.xlsx"
-                                    df = transform_to_df(final_solution_patterns)
-                                    df = df[['stock', 'inventory_id', 'stock_weight', 'stock_width',  
-                                            'receiving_date','explanation', 'remarks', 'cutting_date',
-                                            'trim_loss', 'trim_loss_pct', 'fg_code', 'Customer', 'FG Weight',
-                                            'FG width', 'standard', 'Min weight', 'Max weight', 'average_fc',
-                                            '1st Priority', 'cuts', 'lines']]
-                                    df['time'] = end_time - start_time
-                                    if os.path.isfile(filename):
-                                        with pd.ExcelWriter(filename, engine='openpyxl', mode='a',if_sheet_exists='overlay') as writer:
-                                            df.to_excel(writer, sheet_name='Sheet1', index=False)
-                                    else: df.to_excel(filename, index=False)
+                                                stocks_to_use.pop(list(partial_stocks.keys())[0])
+                                                stocks_to_use.update(steel.remained_stocks)
+                                                try:
+                                                    taken_stock_key = list(steel.taken_stocks.keys())[0]
+                                                    trim_loss_semi_pct=(steel.og_stock_width - sum([neg_subfinish[f]["width"] * steel.cuts_dict[f] for f in steel.cuts_dict.keys()]))/steel.og_stock_width
+                                                    if trim_loss_semi_pct > 0.04:
+                                                        explain = "keep Semi"
+                                                    else: explain = ""
+                                                    weight_dict = {f: round(steel.cuts_dict[f] * neg_subfinish[f]['width'] * steel.taken_stocks[taken_stock_key]['weight']/steel.taken_stocks[taken_stock_key]['width'],3) for f in steel.cuts_dict.keys()}
+                                                    over_cut = {k: float(v + neg_subfinish[k]["need_cut"]) for k, v in weight_dict.items()} #need_cut am
+                                                    logger.info(f"Semi Solution : {taken_stock_key}, {steel.cuts_dict} weight {weight_dict}, over_cut {over_cut}")
+                                                    fk = list(steel.cuts_dict.keys())[0]
+                                                    if neg_subfinish[fk]['Max_weight'] !=0 and neg_subfinish[fk]['Max_weight'] !="":
+                                                        div_ratio = round((neg_subfinish[fk]['width'] * steel.taken_stocks[taken_stock_key]['weight'])/(steel.taken_stocks[taken_stock_key]['width']* neg_subfinish[fk]['Max_weight']))
+                                                    else:
+                                                        div_ratio=0
+                                                    if div_ratio <= 1: 
+                                                        rmark_note = ""
+                                                    else: 
+                                                        rmark_note = f"chat {div_ratio} phan"
+                                                    semi_pattern = {"stock": taken_stock_key,
+                                                                    "inventory_id": re.sub(r"-Se\d+", "", taken_stock_key),
+                                                                    "stock_width":  steel.taken_stocks[taken_stock_key]['width'],
+                                                                    "stock_weight": steel.taken_stocks[taken_stock_key]['weight'],
+                                                                    "receiving_date":steel.taken_stocks[taken_stock_key]['receiving_date'],
+                                                                    "fg_code":{f: neg_subfinish[f]['fg_codes'] for f in steel.cuts_dict.keys()},
+                                                                    "Customer": {f: neg_subfinish[f]['customer_name'] for f in steel.cuts_dict.keys()},
+                                                                    'cuts': steel.cuts_dict,
+                                                                    "FG Weight": weight_dict,
+                                                                    "FG width": {f: neg_subfinish[f]['width'] for f in steel.cuts_dict.keys()},
+                                                                    "standard": {f: neg_subfinish[f]['standard'] for f in steel.cuts_dict.keys()},
+                                                                    "Min weight":{f: neg_subfinish[f]['Min_weight'] for f in steel.cuts_dict.keys()},
+                                                                    "Max weight":{f: neg_subfinish[f]['Max_weight'] for f in steel.cuts_dict.keys()},
+                                                                    'average_fc':{f: neg_subfinish[f]['average FC'] for f in steel.cuts_dict.keys()},
+                                                                    '1st Priority':{f: neg_subfinish[f]['1st Priority'] for f in steel.cuts_dict.keys()},
+                                                                    "explanation": explain,
+                                                                    "remarks": {f: rmark_note for f in steel.cuts_dict.keys()},
+                                                                    "cutting_date":"",
+                                                                    "trim_loss":"" , 
+                                                                    "trim_loss_pct": round(trim_loss_semi_pct*100,3)
+                                                                    }
+                                                    final_solution_patterns.append(semi_pattern)
+                                                    taken_stocks_dict = {p['stock']: p['stock_weight'] for p in final_solution_patterns}
+                                                except IndexError:
+                                                    fk = list(neg_subfinish.keys())[0]
+                                                    sk = list(partial_stocks.keys())[0]
+                                                    weight_oneline = round(neg_subfinish[fk]['width'] * partial_stocks[sk]['weight']/partial_stocks[sk]['width'],3)
+                                                    logger.warning(f"one line cut {weight_oneline}-kgs for MC {sk} weight {partial_stocks[sk]['weight']}")
+                                                    final_solution_patterns = []
 
-                                    logger.info(f">>> SOLUTION {materialprop_set} for {group_name} at {coil_center} saved  EXCEL file")
-                                    # Refresh
-                                    over_cut = {}
-                                    final_solution_patterns = []
+                                            elif len(neg_subfinish.keys()) <= 3:
+                                                logger.info("*** REWIND Case ***")
+                                                # Find the stock item with the highest weight
+                                                highest_weight_item = max(partial_stocks.items(), key=lambda x: x[1]["weight"])
+                                                # Extracting the item key and details
+                                                item_key, item_details = highest_weight_item
+                                                rewind_stocks ={item_key: item_details}
+                                                rewind_args_dict = {
+                                                    'logger': logger,
+                                                    'finish': subfinish,
+                                                    'stocks': rewind_stocks,
+                                                    'MATERIALPROPS': MATERIALPROPS,
+                                                    'margin_df': margin_df,
+                                                    }
+                                                try:
+                                                    final_solution_patterns, over_cut, taken_stocks, remained_stocks = multistocks_cut(retry_inner_count,**rewind_args_dict, prob_type="Rewind")
+                                                    taken_stocks_dict = {p['stock']: p['stock_weight'] for p in final_solution_patterns}
+                                                    logger.info(f"REMAINED stocks: {[remained_stocks.keys()]}")
+                                                    filtered_stocks_by_wh.pop(list(partial_stocks.keys())[0]) # truong hop ko cat duoc 
+                                                    filtered_stocks_by_wh.update(remained_stocks)     # thi 2 dong nay bu tru nhau
+                                                    
+                                                    stocks_by_standard.pop(list(partial_stocks.keys())[0]) 
+                                                    stocks_by_standard.update(remained_stocks)   
 
-                            # GO TO next INNER COIL CENTER priority to find more suitable coils?
-                            while icc < len(inner_coil_center_order) - 1: # NO.4
-                                next_warehouse_stocks = filter_stocks_by_wh(stocks_by_standard, inner_coil_center_order[icc+1])
-                                current_total_warehouse_stocks =filter_stocks_by_wh(stocks_by_standard, inner_coil_center_order[icc])
-                                current_inner_coil_center_priority_cond = False
-                                next_inner_coil_center_priority_cond = False
-                                for st in unqualified_stocks.keys():
+                                                    stocks_to_use.pop(list(partial_stocks.keys())[0]) 
+                                                    stocks_to_use.update(remained_stocks)    
+                                                except TypeError: pass 
+                                            else: pass
+                                    else: logger.warning(f'>>> Out of SUITABLE stocks for {group_name} in {coil_center}')
+                                    
+                                    # MOVE NOT-FULLY CUT FG IN THIS SUBGROUP TO NEXT SUBGROUP
+                                    moved_subfinish = move_finish(subfinish, over_cut)
+
+                                    # COMPLETE CUTTING for sub-finish
+                                    if not final_solution_patterns:
+                                        logger.warning(f"!!! NO solution/NO cutting at {coil_center}")
+                                        sum_need_cut = -sum([subfinish[f]['need_cut'] for f in subfinish.keys()])
+                                        no_solution = [{
+                                            "stock": coil_center,
+                                            "inventory_id": "",
+                                            "stock_width":  "",
+                                            "stock_weight": "",
+                                            "receiving_date":"",
+                                            "cutting_date":"",
+                                            "trim_loss":"" , 
+                                            "trim_loss_pct": "",
+                                            'cuts': {f: 0 for f in subfinish.keys()},
+                                            "fg_code":{f: subfinish[f]['fg_codes'] for f in subfinish.keys()},
+                                            "Customer":{f: subfinish[f]['customer_name'] for f in subfinish.keys()},
+                                            "FG Weight": {f: 0 for f in subfinish.keys()},
+                                            "FG width": {f: subfinish[f]['width'] for f in subfinish.keys()},
+                                            "standard": {f: subfinish[f]['standard'] for f in subfinish.keys()},
+                                            "Min weight":  {f: subfinish[f]['Min_weight'] for f in subfinish.keys()},
+                                            "Max weight":  {f: subfinish[f]['Max_weight'] for f in subfinish.keys()},
+                                            "average_fc": {f: subfinish[f]['average FC'] for f in subfinish.keys()},
+                                            '1st Priority':{f: subfinish[f]['1st Priority'] for f in subfinish.keys()},
+                                            "explanation": {f: "No optimal solution for trim loss <4%" if sum_need_cut > 200 else "Minor need-cut" for f in subfinish.keys()},
+                                            "remarks": {f: "" for f in subfinish.keys()}
+                                            }]
+                                        # --- SAVE DF to EXCEL ---
+                                        end_time = time.time()
+                                        cleaned_materialprop_set = clean_filename(materialprop_set)
+                                        filename = f"results/UATresult-{uat}-job{i}-{group_name}-nosolution.xlsx"
+                                        df = flattern_data(no_solution)
+                                        df = df[['stock', 'inventory_id', 'stock_weight', 'stock_width',  
+                                                'receiving_date','explanation', 'remarks', 'cutting_date',
+                                                'trim_loss', 'trim_loss_pct', 'fg_code', 'Customer', 'FG Weight',
+                                                'FG width', 'standard', 'Min weight', 'Max weight', 'average_fc',
+                                                '1st Priority', 'cuts', 'lines']]
+                                        df['time'] = end_time - start_time
+                                        if os.path.isfile(filename):
+                                            with pd.ExcelWriter(filename, engine='openpyxl', mode='a',if_sheet_exists='overlay') as writer:
+                                                df.to_excel(writer, sheet_name='Sheet1', index=False)
+                                        else: df.to_excel(filename, index=False)
+                                        logger.warning(f"MC CODE {materialprop_set} for {group_name} saved EXCEL file")
+                                    else: 
+                                        # UPDATE USED STOCK AND REMAINING NEEDCUT
+                                        total_taken_stocks.append(taken_stocks)
+                                        # stocks_by_standard = refresh_stocks(taken_stocks, taken_stocks_dict ,stocks_by_standard)
+                                        # stocks_to_use = refresh_stocks(taken_stocks,taken_stocks_dict, stocks_to_use)
+
+                                        # --- SAVE DF to EXCEL ---
+                                        end_time = time.time()
+                                        cleaned_materialprop_set = clean_filename(materialprop_set)
+                                        filename = f"results/UATresult-{uat}-job{i}-{group_name}-{coil_center}.xlsx"
+                                        df = transform_to_df(final_solution_patterns)
+                                        df = df[['stock', 'inventory_id', 'stock_weight', 'stock_width',  
+                                                'receiving_date','explanation', 'remarks', 'cutting_date',
+                                                'trim_loss', 'trim_loss_pct', 'fg_code', 'Customer', 'FG Weight',
+                                                'FG width', 'standard', 'Min weight', 'Max weight', 'average_fc',
+                                                '1st Priority', 'cuts', 'lines']]
+                                        df['time'] = end_time - start_time
+                                        if os.path.isfile(filename):
+                                            old_df = pd.read_excel(filename)
+                                            appended_df = pd.concat([old_df,df], axis=0, ignore_index=True)
+                                            with pd.ExcelWriter(filename, engine='openpyxl', mode='a',if_sheet_exists='overlay') as writer:
+                                                appended_df.to_excel(writer, sheet_name='Sheet1', index=False)
+                                        else: df.to_excel(filename, index=False)
+
+                                        logger.info(f">>> SOLUTION {materialprop_set} for {group_name} at {coil_center} saved  EXCEL file")
+                                        # Refresh
+                                        over_cut = {}
+                                        final_solution_patterns = []
+
+                                    index += 1
+                                # GO TO next INNER COIL CENTER priority to find more suitable coils?
+                                while icc < len(inner_coil_center_order): # NO.4
                                     try:
-                                        current_total_warehouse_stocks.pop(st)
-                                    except KeyError: pass
-                                
-                                logger.info(f"After refreshing subfinish {moved_subfinish.keys()}")
-                                hasnt_negative_over_cut = (not moved_subfinish) # empty moved_subfinish = True
-                                if len(current_total_warehouse_stocks) == 0:
-                                    icc += 1
-                                    logger.info(f"-- Go to inner wh order {inner_coil_center_order[icc]}")
-                                    next_inner_coil_center_priority_cond = (not hasnt_negative_over_cut and (len(next_warehouse_stocks)!=0))
-                                    logger.info(f"??? Go to next inner warehouse: {next_inner_coil_center_priority_cond} as neg need cut {(not hasnt_negative_over_cut)} and next warehouse {(len(next_warehouse_stocks)!=0)} ")
-                                else:
+                                        next_warehouse_stocks = filter_stocks_by_wh(stocks_by_standard, inner_coil_center_order[icc+1])
+                                    except : next_warehouse_stocks ={}
+                                    current_total_warehouse_stocks =filter_stocks_by_wh(stocks_by_standard, inner_coil_center_order[icc])
+                                    current_inner_coil_center_priority_cond = False
+                                    next_inner_coil_center_priority_cond = False
+                                    if retry_inner_count > 1:
+                                        for st in unqualified_stocks.keys():
+                                            try:
+                                                current_total_warehouse_stocks.pop(st)
+                                            except KeyError: pass
+                                    
+                                    logger.info(f"After refreshing subfinish {moved_subfinish.keys()}")
+                                    hasnt_negative_over_cut = (not moved_subfinish) # empty moved_subfinish = True
+
+                                    # Check condition
+                                    next_inner_coil_center_priority_cond = (not hasnt_negative_over_cut and (len(next_warehouse_stocks)>0))
                                     current_inner_coil_center_priority_cond = (not hasnt_negative_over_cut and (len(current_total_warehouse_stocks)!=0))
-                                    logger.info(f"??? Continue to cut {current_inner_coil_center_priority_cond}: in {inner_coil_center_order[icc]} warehouse as neg need cut {(not hasnt_negative_over_cut)} and current warehouse stocks {(len(current_total_warehouse_stocks))} ")
-                                
-                                inner_coil_center_priority_cond = (next_inner_coil_center_priority_cond or current_inner_coil_center_priority_cond)
-                                if not inner_coil_center_priority_cond:
-                                    break
-                                if current_inner_coil_center_priority_cond:
-                                    coilcenter_finish_df= pd.DataFrame.from_dict(moved_subfinish, orient='index').reset_index()
-                                    coilcenter_finish_df.rename(columns={'index': 'order_id'}, inplace=True)
-                                    retry_inner_count +=1
-                                    if retry_inner_count < 2:
+                                    inner_coil_center_priority_cond = (next_inner_coil_center_priority_cond or current_inner_coil_center_priority_cond)
+                                    if not inner_coil_center_priority_cond:
+                                        break
+                                    
+                                    if len(current_total_warehouse_stocks) == 0:
+                                        icc += 1
+                                        logger.info(f"??? Go to next inner warehouse {inner_coil_center_order[icc]}: {next_inner_coil_center_priority_cond} as neg need cut {(not hasnt_negative_over_cut)} and next warehouse {(len(next_warehouse_stocks)!=0)} ")
+                                    elif current_inner_coil_center_priority_cond and retry_inner_count <1:
+                                        retry_inner_count +=1
                                         logger.info(f"Stay in {inner_coil_center_order[icc]} to find other coil {retry_inner_count} times")
+                                        logger.info(f"??? Condition to cut in {inner_coil_center_order[icc]} is <<{current_inner_coil_center_priority_cond}>> as neg need cut {(not hasnt_negative_over_cut)} and current warehouse stocks {(len(current_total_warehouse_stocks))} ")
+                                        coilcenter_finish_df= pd.DataFrame.from_dict(moved_subfinish, orient='index').reset_index()
+                                        coilcenter_finish_df.rename(columns={'index': 'order_id'}, inplace=True)
+                                        add_new_fg_in_new_coil_center_df = pd.DataFrame(columns= coilcenter_finish_df.columns)
+                                        break
+                                    elif next_inner_coil_center_priority_cond:
+                                        moved_standard_finish.update(moved_subfinish)
+                                        last_inner_coil_center_order = inner_coil_center_order[icc]
+                                        logger.info(f'Stop try in {last_inner_coil_center_order}. Move {len(moved_standard_finish)} FGS to next inner coil center prio')
+                                        icc += 1
+                                        coil_center = inner_coil_center_order[icc]
+                                        logger.info(f">>> REDIRECT TO {coil_center}")
+                                        retry_inner_count = 0
+                                        moved_subfinish_df= pd.DataFrame.from_dict(moved_subfinish, orient='index').reset_index()
+                                        if icc == 1:
+                                            priority_2nd = coilcenter_finish_df['2nd Priority'].unique()
+                                            if len(priority_2nd) >1 : # khac nhau 2nd prio
+                                                check_leftover_2nd_prio = True
+                                                left_over_coil_center_2nd_prio = priority_2nd[priority_2nd != coil_center]
+                                                leftover_2nd_prio_subfinish_df = moved_subfinish_df[moved_subfinish_df['2nd Priority']== left_over_coil_center_2nd_prio[0]]
+
+                                            coilcenter_finish_df = moved_subfinish_df[moved_subfinish_df['2nd Priority'] == coil_center]
+                                        elif icc == 2 and (left_over_coil_center_2nd_prio==coil_center):
+                                            coilcenter_finish_df = moved_subfinish_df[moved_subfinish_df['3rd Priority'] == coil_center]
+                                            coilcenter_finish_df = pd.concat([coilcenter_finish_df,leftover_2nd_prio_subfinish_df],axis=0, ignore_index=True)
+                                        elif icc == 2:
+                                            coilcenter_finish_df = moved_subfinish_df[moved_subfinish_df['3rd Priority'] == coil_center]
+                                        coilcenter_finish_df.rename(columns={'index': 'order_id'}, inplace=True)
+                                        # Add more FG if any
+                                        add_new_fg_in_new_coil_center_df = finish_df[finish_df['1st Priority'] == coil_center]
+                                        icc = 0
+                                        new_inner_coil_center_order = copy.deepcopy(add_new_fg_in_new_coil_center_df[['1st Priority','2nd Priority','3rd Priority']].iloc[0].astype(str).tolist())
+                                        new_inner_coil_center_order.remove(last_inner_coil_center_order)
+                                        logger.info(f" New inner coil center prio {new_inner_coil_center_order}")
+
+                                        avalaible_coil_center.remove(coil_center)
+
+                                        overlap = set(new_inner_coil_center_order) & set(avalaible_coil_center)
+                                        overlap_list = [x for x in overlap]
+                                        inner_coil_center_order = copy.deepcopy([new_inner_coil_center_order[0]] + overlap_list)
+
                                         break
                                     else:
                                         logger.info(f'Stop try in {inner_coil_center_order[icc]}')
-                                        # MOVE NOT-FULLY CUT FG IN THIS SUBGROUP TO MEDIUM
+                                            # MOVE NOT-FULLY CUT FG IN THIS SUBGROUP TO MEDIUM
                                         moved_standard_finish.update(moved_subfinish)
                                         if len(moved_standard_finish) > 0:
-                                            logger.info(f"Move to medium group to cut {len(moved_standard_finish)} FGs ")
-                                        raise OutOfStocks
-                                    
-                                if next_inner_coil_center_priority_cond:
-                                    coil_center = inner_coil_center_order[icc]
-                                    logger.info(f">>> REDIRECT TO {coil_center}")
-                                    moved_subfinish_df= pd.DataFrame.from_dict(moved_subfinish, orient='index').reset_index()
-                                    if icc == 1:
-                                        priority_2nd = coilcenter_finish_df['2nd Priority'].unique()
-                                        if len(priority_2nd) >1 : # khac nhau 2nd prio
-                                            check_leftover_2nd_prio = True
-                                            left_over_coil_center_2nd_prio = priority_2nd[priority_2nd != coil_center]
-                                            leftover_2nd_prio_subfinish_df = moved_subfinish_df[moved_subfinish_df['2nd Priority']== left_over_coil_center_2nd_prio[0]]
-
-                                        coilcenter_finish_df = moved_subfinish_df[moved_subfinish_df['2nd Priority'] == coil_center]
-                                    elif icc == 2 and (left_over_coil_center_2nd_prio==coil_center):
-                                        coilcenter_finish_df = moved_subfinish_df[moved_subfinish_df['3rd Priority'] == coil_center]
-                                        coilcenter_finish_df = pd.concat([coilcenter_finish_df,leftover_2nd_prio_subfinish_df],axis=0, ignore_index=True)
-                                    elif icc == 2:
-                                        coilcenter_finish_df = moved_subfinish_df[moved_subfinish_df['3rd Priority'] == coil_center]
-                                    coilcenter_finish_df.rename(columns={'index': 'order_id'}, inplace=True)
-                                    # Add more FG if any
-                                    add_new_fg_in_new_coil_center = finish_df[finish_df['1st Priority'] == coil_center]
-                                    avalaible_coil_center = avalaible_coil_center[avalaible_coil_center != coil_center]
-                                    break                           
-                    else: 
-                        logger.warning(f'>>>> DONT HAVE FG w NEEDCUT {sum_need_cut} WITH 1ST PRIORITY AT {coil_center}. Move to next coil center')
+                                            logger.info(f"Move {moved_subfinish.keys()} FGS to MEDIUM group to cut")
+                                        raise OutOfStocks            
+                        else: 
+                            logger.warning(f'>>> DONT HAVE FG w NEEDCUT {sum_need_cut} WITH 1ST PRIORITY AT {coil_center}. Move to next coil center')
+                    except OutOfInnerStocks: pass
                     
                     # GO TO next OUTER COIL CENTER priority if there still 1st priority group
                     if j < len(avalaible_coil_center) - 1:
-                        j +=1
-                        logging.info(f"TRY go to {avalaible_coil_center[j]}")
+                        j += 1
                         next_warehouse_stocks = filter_stocks_by_wh(stocks_by_standard, avalaible_coil_center[j])
                         next1st_coilcenter_finish_df = finish_df[finish_df['1st Priority']== avalaible_coil_center[j]]
-                        if next1st_coilcenter_finish_df.shape[0] > 0 and len(next_warehouse_stocks):
+                        if next1st_coilcenter_finish_df.shape[0] > 0 and len(next_warehouse_stocks)>0:
                             outer_coil_center_priority_cond = True
                         else:
                             outer_coil_center_priority_cond = False      
                     else: 
                         outer_coil_center_priority_cond = False
-                    logger.info(f"??? Go to next warehouse 1priority: {outer_coil_center_priority_cond}")
+                    logger.info(f"??? Go to next warehouse 1priority (outerloop) {avalaible_coil_center[j]}: {outer_coil_center_priority_cond}")
 
                 # MOVE NOT-FULLY CUT FG IN THIS SUBGROUP TO MEDIUM
                 moved_standard_finish.update(moved_subfinish)
